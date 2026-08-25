@@ -1,4 +1,5 @@
 import asyncio
+import os
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 
@@ -8,6 +9,7 @@ from backend.app.domain.models import (
     ToolTraceEntry,
 )
 from backend.app.integrations.bigquery.client import BigQueryHistoricalClient
+from backend.app.integrations.foxglove.client import FoxgloveClient
 from backend.app.integrations.gcs.client import GCSClient
 from backend.app.integrations.grafana.mcp_client import GrafanaMCPClient
 from backend.app.integrations.mcap.inspector import MCAPInspector
@@ -22,6 +24,7 @@ class InvestigationStateMachine:
         self.grafana_client = GrafanaMCPClient()
         self.bq_client = BigQueryHistoricalClient()
         self.gcs_client = GCSClient()
+        self.foxglove_client = FoxgloveClient()
         self.mcap_inspector = MCAPInspector()
 
     async def run_step(self, step_number: int) -> ToolTraceEntry:
@@ -136,6 +139,23 @@ class InvestigationStateMachine:
 
         elif step_number == 7:
             mcap_summary = self.mcap_inspector.extract_evidence_summary()
+            local_path = self.mcap_inspector.mcap_path
+
+            # Archive the recording so the evidence outlives this container: GCS
+            # for retention, Foxglove so an operator can scrub the actual bag.
+            archive_url = await self.gcs_client.upload_recording(
+                local_path,
+                f"incidents/{self.incident.incident_id}/{os.path.basename(local_path)}",
+            )
+            foxglove = await self.foxglove_client.upload_recording(local_path)
+            self.incident.evidence_links["gcs_archive"] = archive_url
+            self.incident.evidence_links["foxglove_recording"] = foxglove["url"]
+
+            archive_note = (
+                f" Archived to GCS and ingested by Foxglove ({foxglove['bytes']} bytes)."
+                if foxglove.get("uploaded")
+                else ""
+            )
             return ToolTraceEntry(
                 step_number=7,
                 step_name="inspect_recording_evidence",
@@ -145,8 +165,13 @@ class InvestigationStateMachine:
                 tool_input_safe={
                     "mcap_file": mcap_summary["mcap_file"],
                     "channels": mcap_summary["channels"],
+                    "gcs_archive": archive_url,
+                    "foxglove_recording": foxglove["url"],
                 },
-                tool_output_summary=f"Extracted {mcap_summary['total_messages']} messages. Confirmed +35mm Z translation delta on camera optical frame.",
+                tool_output_summary=(
+                    f"Extracted {mcap_summary['total_messages']} messages. Confirmed +35mm Z "
+                    f"translation delta on camera optical frame.{archive_note}"
+                ),
                 timestamp=now_str,
                 duration_ms=130,
             )

@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     GRAFANA_OTLP_USERNAME: str = "123456"
     GRAFANA_OTLP_TOKEN: str = "glc_placeholder"
 
+    # Foxglove Data Platform
+    FOXGLOVE_API_KEY: str = "fox_sk_placeholder"
+    FOXGLOVE_ORG_SLUG: str = "your-org"
+
     # Stage Metadata
     DEFAULT_STAGE_ID: str = "stage-a-virtual-prod"
     DEFAULT_ROBOT_ID: str = "dolly-alpha-01"
