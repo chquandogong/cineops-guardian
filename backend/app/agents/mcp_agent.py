@@ -13,6 +13,7 @@ the operator reads is the agent's actual decision log rather than a script.
 import json
 import logging
 import time
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Any
 
@@ -92,6 +93,7 @@ class MCPGeminiAgent:
     def __init__(self, incident: Incident):
         self.incident = incident
         self.traces: list[ToolTraceEntry] = []
+        self.verdict: AgentInvestigationOutput | None = None
         self._step = 0
 
     def _next_step(self) -> int:
@@ -126,7 +128,17 @@ class MCPGeminiAgent:
         )
 
     async def run(self) -> tuple[list[ToolTraceEntry], AgentInvestigationOutput | None]:
-        """Executes the agent loop. Returns (trace, structured result or None)."""
+        """Runs the agent to completion. Returns (trace, structured verdict or None)."""
+        async for _ in self.stream():
+            pass
+        return self.traces, self.verdict
+
+    async def stream(self) -> AsyncGenerator[ToolTraceEntry, None]:
+        """Runs the agent loop, yielding each trace entry the moment it happens.
+
+        The console subscribes to this over SSE, so what the operator watches is
+        the model's live decision log rather than a replay.
+        """
         from google import genai
         from google.genai import types
 
@@ -143,6 +155,7 @@ class MCPGeminiAgent:
                 ),
                 duration_ms=0,
             )
+            yield self.traces[-1]
 
             declarations = router.gemini_tool_declarations()
             tools = [
@@ -194,8 +207,11 @@ class MCPGeminiAgent:
                         output_summary=_summarize(response.text or "(no text returned)"),
                         duration_ms=think_ms,
                     )
-                    final = await self._finalize(client, types, contents, response)
-                    return self.traces, final
+                    yield self.traces[-1]
+                    self.verdict = await self._finalize(client, types, contents, response)
+                    if self.traces:
+                        yield self.traces[-1]
+                    return
 
                 candidate = response.candidates[0] if response.candidates else None
                 if candidate and candidate.content:
@@ -219,6 +235,7 @@ class MCPGeminiAgent:
                         duration_ms=call_ms,
                         status="error" if is_error else "success",
                     )
+                    yield self.traces[-1]
                     response_parts.append(
                         types.Part(
                             function_response=types.FunctionResponse(
@@ -243,7 +260,8 @@ class MCPGeminiAgent:
                 duration_ms=0,
                 status="warning",
             )
-            return self.traces, None
+            yield self.traces[-1]
+            self.verdict = None
 
     async def _finalize(
         self, client: Any, types: Any, contents: list[Any], last_response: Any

@@ -34,7 +34,7 @@ class AgentOrchestrator:
                 traces, verdict = await agent.run()
                 incident.tool_trace = traces
                 if verdict is not None:
-                    self._apply_verdict(incident, verdict)
+                    self.apply_verdict(incident, verdict)
                     incident.status = "awaiting_approval"
                     return incident
                 logger.warning("Agent produced no verdict; using recorded fixture diagnosis")
@@ -54,7 +54,7 @@ class AgentOrchestrator:
         return incident
 
     @staticmethod
-    def _apply_verdict(incident: Incident, verdict: AgentInvestigationOutput) -> None:
+    def apply_verdict(incident: Incident, verdict: AgentInvestigationOutput) -> None:
         """Replaces the fixture diagnosis with what the agent actually concluded."""
         ordered = [verdict.primary_hypothesis, *verdict.alternative_hypotheses]
         incident.hypotheses = [

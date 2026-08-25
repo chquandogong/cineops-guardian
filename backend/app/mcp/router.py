@@ -176,7 +176,14 @@ class MCPToolRouter:
             if text:
                 chunks.append(text)
         payload = "\n".join(chunks) or "(no textual content returned)"
-        return payload, bool(getattr(result, "isError", False))
+        # MCP SDKs have used both spellings; a tool that raised also comes back as
+        # an "Error executing tool ..." payload, which the model must see as failed
+        # so it can correct its arguments and retry.
+        flagged = bool(getattr(result, "is_error", False) or getattr(result, "isError", False))
+        looks_failed = payload.startswith("Error executing tool") or (
+            "returned status code 4" in payload or "returned status code 5" in payload
+        )
+        return payload, flagged or looks_failed
 
 
 def _tool_schema(tool: Any) -> dict[str, Any]:
