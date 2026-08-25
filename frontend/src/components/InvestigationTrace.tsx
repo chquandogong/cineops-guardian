@@ -41,7 +41,7 @@ export const InvestigationTrace: React.FC<InvestigationTraceProps> = ({ traces, 
           {isInvestigating ? (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-950/80 border border-cyan-800/60 px-2 py-0.5 text-[11px] font-mono text-cyan-300 animate-pulse">
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
-              INVESTIGATING ({traces.length}/11)
+              INVESTIGATING — {traces.length} TOOL CALL{traces.length === 1 ? '' : 'S'}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 border border-slate-800 px-2 py-0.5 text-[11px] font-mono text-slate-400">
