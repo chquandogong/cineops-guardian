@@ -79,3 +79,36 @@ Bridging the gap between cloud-native observability paradigms (Prometheus timese
 - **Multi-Stage Fleet Orchestration:** Expanding from single-stage monitoring to studio-wide multi-volume fleet management across LED stages.
 - **Unreal Engine Live Link Plugin:** Direct telemetry feed from Unreal Engine nDisplay frustum renderers into the CineOps Guardian observability plane.
 - **Edge Deployment on NVIDIA Jetson:** Deploying lightweight CineOps Guardian sidecar agents directly onboard motion-control camera rigs for offline edge-level anomaly detection.
+
+---
+
+## 📺 YouTube Demo Video Package
+
+- **Video File:** `/home/chquan/CineOps-Guardian-Demo.mp4` (Duration: 2m 02s, 1080p 30fps with Neural English Voiceover)
+- **Title:** `CineOps Guardian — AI Observability & Incident Recovery for Virtual Production (Gemini 3.7 & Grafana MCP)`
+- **Description:**
+```text
+CineOps Guardian: AI-Powered Observability & Incident Recovery Agent for Virtual Production Stages & Robotic Camera Fleets.
+
+Built for the Google Cloud & Grafana Labs "Agentic Cinema: The Blockbuster Hackathon".
+
+🎬 Live Demo Highlights:
+0:00 - Scene 42 Take 3 Stage Incident ($25,000/hr burn rate)
+0:15 - Real-time Telemetry Collapse (16.2 FPS, 7 Nav Recovery Loops)
+0:25 - Autonomous Agent Re-run via Server-Sent Events (SSE)
+0:35 - Grafana MCP (PromQL & Loki LogQL) + BigQuery + Foxglove MCAP Triage
+0:52 - Gemini 3.7 Flash (High Thinking) Differential Root-Cause Diagnosis
+1:08 - Telemetry Rule-Out (GPU thermal & network congestion rejected)
+1:21 - MCAP Spatial Analysis (+35mm Z-extrinsic transform drift localized)
+1:44 - Human Safety Authorization Gate & Rollback Protection
+1:55 - Automated 4-Point Telemetry Verification & 24.00 FPS Genlock Restored
+
+🔗 Codebase & Artifacts:
+GitHub: https://github.com/chquandogong/cineops-guardian
+Release Tag: https://github.com/chquandogong/cineops-guardian/releases/tag/v1.0.0
+License: Apache 2.0 Open Source
+
+#GeminiAI #GoogleCloud #Grafana #MCP #VirtualProduction #Robotics #ROS2 #Foxglove #Devpost
+```
+- **Visibility:** `Public` or `Unlisted`
+- **Made for kids:** `No, it's not made for kids`
