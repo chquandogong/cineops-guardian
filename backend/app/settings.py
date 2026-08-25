@@ -1,0 +1,39 @@
+from typing import Literal
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    # App & Environment
+    PROJECT_NAME: str = "CineOps Guardian"
+    VERSION: str = "1.0.0"
+    ENVIRONMENT: Literal["development", "production", "test"] = "development"
+    DEMO_MODE: Literal["mock", "real"] = "mock"
+    HOST: str = "0.0.0.0"
+    PORT: int = 8080
+
+    # Google Cloud
+    GOOGLE_CLOUD_PROJECT: str = "project-55fbcfd2-0ad6-4c99-a25"
+    GOOGLE_CLOUD_LOCATION: str = "global"
+    GEMINI_MODEL: str = "gemini-3.7-flash"
+    GEMINI_THINKING_LEVEL: str = "HIGH"
+    BIGQUERY_DATASET: str = "cineops_guardian"
+    GCS_BUCKET: str = "cineops-guardian-evidence"
+
+    # Grafana & MCP
+    GRAFANA_URL: str = "https://your-stack.grafana.net"
+    GRAFANA_SERVICE_ACCOUNT_TOKEN: str = "glsa_placeholder"
+    GRAFANA_MCP_URL: str = "http://localhost:8000"
+    GRAFANA_STACK_ID: str = "123456"
+    GRAFANA_OTLP_ENDPOINT: str = "https://otlp-gateway-prod-us-east-0.grafana.net/otlp"
+    GRAFANA_OTLP_USERNAME: str = "123456"
+    GRAFANA_OTLP_TOKEN: str = "glc_placeholder"
+
+    # Stage Metadata
+    DEFAULT_STAGE_ID: str = "stage-a-virtual-prod"
+    DEFAULT_ROBOT_ID: str = "dolly-alpha-01"
+
+
+settings = Settings()

@@ -1,0 +1,617 @@
+{
+  "incident_id": "inc-stage-a-001",
+  "title": "Robotic Camera Dolly Avoidance Oscillation & Frame Jitter",
+  "severity": "P1-CRITICAL",
+  "status": "awaiting_approval",
+  "triggered_at": "2026-08-25T15:11:50.341793+00:00",
+  "stage_info": {
+    "stage_id": "stage-a-virtual-prod",
+    "stage_name": "Stage A \u2014 Virtual Production Volume",
+    "current_scene": "Scene 42",
+    "current_take": "Take 3",
+    "shooting_status": "paused",
+    "led_wall_sync": true,
+    "genlock_fps": 24.0,
+    "timecode": "14:22:08:19"
+  },
+  "robot_telemetry": {
+    "robot_id": "dolly-alpha-01",
+    "robot_name": "Camera Dolly Alpha",
+    "firmware_version": "v2.8.4-ros2-iron",
+    "active_rig_profile": "CALIB-RIG-2026-v3",
+    "approved_rig_profile": "CALIB-RIG-2026-v4",
+    "tf_checksum_valid": false,
+    "battery_percentage": 88.5,
+    "camera_fps": 16.2,
+    "target_fps": 24.0,
+    "dropped_frames_pct": 32.5,
+    "encoder_latency_ms": 48.2,
+    "gpu_utilization_pct": 64.0,
+    "gpu_temp_celsius": 62.5,
+    "network_rtt_ms": 2.4,
+    "network_packet_loss_pct": 0.1,
+    "localization_confidence": 0.42,
+    "nav_recovery_loop_count": 7,
+    "velocity_command_oscillation_hz": 3.8,
+    "costmap_inflation_alert": true
+  },
+  "trajectory": [
+    {
+      "timestamp_offset_s": 0.0,
+      "planned_x": 1.0,
+      "planned_y": 2.0,
+      "actual_x": 1.01,
+      "actual_y": 2.01,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 3.5,
+      "tf_error_norm_m": 0.002,
+      "status": "normal"
+    },
+    {
+      "timestamp_offset_s": 1.0,
+      "planned_x": 1.4,
+      "planned_y": 2.0,
+      "actual_x": 1.41,
+      "actual_y": 2.01,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 3.35,
+      "tf_error_norm_m": 0.002,
+      "status": "normal"
+    },
+    {
+      "timestamp_offset_s": 2.0,
+      "planned_x": 1.8,
+      "planned_y": 2.0,
+      "actual_x": 1.81,
+      "actual_y": 2.01,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 3.2,
+      "tf_error_norm_m": 0.002,
+      "status": "normal"
+    },
+    {
+      "timestamp_offset_s": 3.0,
+      "planned_x": 2.2,
+      "planned_y": 2.0,
+      "actual_x": 2.21,
+      "actual_y": 2.01,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 3.05,
+      "tf_error_norm_m": 0.002,
+      "status": "normal"
+    },
+    {
+      "timestamp_offset_s": 4.0,
+      "planned_x": 2.6,
+      "planned_y": 2.0,
+      "actual_x": 2.61,
+      "actual_y": 2.01,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 2.9,
+      "tf_error_norm_m": 0.002,
+      "status": "normal"
+    },
+    {
+      "timestamp_offset_s": 5.0,
+      "planned_x": 3.0,
+      "planned_y": 2.0,
+      "actual_x": 3.01,
+      "actual_y": 2.01,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 2.75,
+      "tf_error_norm_m": 0.002,
+      "status": "normal"
+    },
+    {
+      "timestamp_offset_s": 6.0,
+      "planned_x": 3.4,
+      "planned_y": 2.0,
+      "actual_x": 3.41,
+      "actual_y": 2.01,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 2.6,
+      "tf_error_norm_m": 0.002,
+      "status": "normal"
+    },
+    {
+      "timestamp_offset_s": 7.0,
+      "planned_x": 3.8,
+      "planned_y": 2.0,
+      "actual_x": 3.81,
+      "actual_y": 2.01,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 2.45,
+      "tf_error_norm_m": 0.002,
+      "status": "normal"
+    },
+    {
+      "timestamp_offset_s": 8.0,
+      "planned_x": 4.2,
+      "planned_y": 2.0,
+      "actual_x": 4.21,
+      "actual_y": 2.01,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 2.3,
+      "tf_error_norm_m": 0.002,
+      "status": "normal"
+    },
+    {
+      "timestamp_offset_s": 9.0,
+      "planned_x": 4.6,
+      "planned_y": 2.0,
+      "actual_x": 4.61,
+      "actual_y": 2.01,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 2.15,
+      "tf_error_norm_m": 0.002,
+      "status": "normal"
+    },
+    {
+      "timestamp_offset_s": 10.0,
+      "planned_x": 5.0,
+      "planned_y": 2.0,
+      "actual_x": 4.85,
+      "actual_y": 2.28,
+      "velocity_mps": 0.4,
+      "obstacle_distance_m": 1.8,
+      "tf_error_norm_m": 0.005,
+      "status": "warning"
+    },
+    {
+      "timestamp_offset_s": 11.0,
+      "planned_x": 5.4,
+      "planned_y": 2.0,
+      "actual_x": 5.25,
+      "actual_y": 1.72,
+      "velocity_mps": 0.36,
+      "obstacle_distance_m": 1.75,
+      "tf_error_norm_m": 0.0085,
+      "status": "warning"
+    },
+    {
+      "timestamp_offset_s": 12.0,
+      "planned_x": 5.8,
+      "planned_y": 2.0,
+      "actual_x": 5.65,
+      "actual_y": 2.28,
+      "velocity_mps": 0.33,
+      "obstacle_distance_m": 1.7,
+      "tf_error_norm_m": 0.012,
+      "status": "warning"
+    },
+    {
+      "timestamp_offset_s": 13.0,
+      "planned_x": 6.2,
+      "planned_y": 2.0,
+      "actual_x": 6.05,
+      "actual_y": 1.72,
+      "velocity_mps": 0.3,
+      "obstacle_distance_m": 1.65,
+      "tf_error_norm_m": 0.0155,
+      "status": "warning"
+    },
+    {
+      "timestamp_offset_s": 14.0,
+      "planned_x": 6.6,
+      "planned_y": 2.0,
+      "actual_x": 6.45,
+      "actual_y": 2.28,
+      "velocity_mps": 0.26,
+      "obstacle_distance_m": 1.6,
+      "tf_error_norm_m": 0.019,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 15.0,
+      "planned_x": 7.0,
+      "planned_y": 2.0,
+      "actual_x": 6.85,
+      "actual_y": 1.72,
+      "velocity_mps": 0.23,
+      "obstacle_distance_m": 1.55,
+      "tf_error_norm_m": 0.0225,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 16.0,
+      "planned_x": 7.4,
+      "planned_y": 2.0,
+      "actual_x": 7.25,
+      "actual_y": 2.28,
+      "velocity_mps": 0.19,
+      "obstacle_distance_m": 1.5,
+      "tf_error_norm_m": 0.026,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 17.0,
+      "planned_x": 7.8,
+      "planned_y": 2.0,
+      "actual_x": 7.65,
+      "actual_y": 1.72,
+      "velocity_mps": 0.15,
+      "obstacle_distance_m": 1.45,
+      "tf_error_norm_m": 0.0295,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 18.0,
+      "planned_x": 8.2,
+      "planned_y": 2.0,
+      "actual_x": 8.05,
+      "actual_y": 2.28,
+      "velocity_mps": 0.12,
+      "obstacle_distance_m": 1.4,
+      "tf_error_norm_m": 0.033,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 19.0,
+      "planned_x": 8.6,
+      "planned_y": 2.0,
+      "actual_x": 8.45,
+      "actual_y": 1.72,
+      "velocity_mps": 0.08,
+      "obstacle_distance_m": 1.35,
+      "tf_error_norm_m": 0.0365,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 20.0,
+      "planned_x": 8.6,
+      "planned_y": 2.0,
+      "actual_x": 8.5,
+      "actual_y": 2.35,
+      "velocity_mps": 0.05,
+      "obstacle_distance_m": 1.25,
+      "tf_error_norm_m": 0.038,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 21.0,
+      "planned_x": 8.6,
+      "planned_y": 2.0,
+      "actual_x": 8.4,
+      "actual_y": 1.65,
+      "velocity_mps": 0.05,
+      "obstacle_distance_m": 1.25,
+      "tf_error_norm_m": 0.038,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 22.0,
+      "planned_x": 8.6,
+      "planned_y": 2.0,
+      "actual_x": 8.45,
+      "actual_y": 2.35,
+      "velocity_mps": 0.05,
+      "obstacle_distance_m": 1.25,
+      "tf_error_norm_m": 0.038,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 23.0,
+      "planned_x": 8.6,
+      "planned_y": 2.0,
+      "actual_x": 8.5,
+      "actual_y": 1.65,
+      "velocity_mps": 0.05,
+      "obstacle_distance_m": 1.25,
+      "tf_error_norm_m": 0.038,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 24.0,
+      "planned_x": 8.6,
+      "planned_y": 2.0,
+      "actual_x": 8.4,
+      "actual_y": 2.35,
+      "velocity_mps": 0.05,
+      "obstacle_distance_m": 1.25,
+      "tf_error_norm_m": 0.038,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 25.0,
+      "planned_x": 8.6,
+      "planned_y": 2.0,
+      "actual_x": 8.45,
+      "actual_y": 1.65,
+      "velocity_mps": 0.05,
+      "obstacle_distance_m": 1.25,
+      "tf_error_norm_m": 0.038,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 26.0,
+      "planned_x": 8.6,
+      "planned_y": 2.0,
+      "actual_x": 8.5,
+      "actual_y": 2.35,
+      "velocity_mps": 0.05,
+      "obstacle_distance_m": 1.25,
+      "tf_error_norm_m": 0.038,
+      "status": "recovery_loop"
+    },
+    {
+      "timestamp_offset_s": 27.0,
+      "planned_x": 8.6,
+      "planned_y": 2.0,
+      "actual_x": 8.4,
+      "actual_y": 1.65,
+      "velocity_mps": 0.05,
+      "obstacle_distance_m": 1.25,
+      "tf_error_norm_m": 0.038,
+      "status": "recovery_loop"
+    }
+  ],
+  "loki_logs": [
+    {
+      "timestamp": "14:21:45.102Z",
+      "level": "INFO",
+      "service": "dolly-rig-mgr",
+      "message": "Lens swap acknowledged: CinePrime 35mm T1.5 mounted on Camera Dolly Alpha.",
+      "metadata": {
+        "rig_profile": "CALIB-RIG-2026-v3",
+        "operator": "cam_tech_02"
+      }
+    },
+    {
+      "timestamp": "14:21:48.330Z",
+      "level": "WARN",
+      "service": "tf2_ros_broadcaster",
+      "message": "Static transform checksum mismatch for [camera_optical_frame] -> [lidar_link]. Expected CRC 0x8F4A, active 0x3E12.",
+      "metadata": {
+        "frame_id": "camera_optical_frame",
+        "parent_id": "lidar_link"
+      }
+    },
+    {
+      "timestamp": "14:22:01.050Z",
+      "level": "WARN",
+      "service": "costmap_2d",
+      "message": "Rapid obstacle inflation detected near coordinates (x: 4.82, y: 2.15). Clearance threshold violated (1.25m < 1.50m).",
+      "metadata": {
+        "obstacle_id": "lighting_c_stand_03"
+      }
+    },
+    {
+      "timestamp": "14:22:03.410Z",
+      "level": "ERROR",
+      "service": "nav2_controller",
+      "message": "Navigation recovery behavior entered: [SpinRecovery -> BackupRecovery]. Consecutive retry count: 7.",
+      "metadata": {
+        "planner": "DWBLocalPlanner",
+        "recovery_count": "7"
+      }
+    },
+    {
+      "timestamp": "14:22:04.990Z",
+      "level": "ERROR",
+      "service": "camera_streamer",
+      "message": "Frame delivery degradation: 32.5% frames dropped in last 5000ms. Optical genlock jitter exceeded 18ms.",
+      "metadata": {
+        "actual_fps": "16.20",
+        "target_fps": "24.00"
+      }
+    }
+  ],
+  "tool_trace": [
+    {
+      "step_number": 1,
+      "step_name": "incident_intake",
+      "tool_type": "system",
+      "action_summary": "Ingested Stage A alert: CameraDollyOscillation & GenlockDrop",
+      "tool_name": "alert_intake_webhook",
+      "tool_input_safe": {
+        "stage_id": "stage-a-virtual-prod",
+        "asset_id": "dolly-alpha-01"
+      },
+      "tool_output_summary": "Incident #inc-stage-a-001 created. Severity: P1-CRITICAL. Scene 42 Take 3.",
+      "timestamp": "2026-08-25T15:11:50.341875+00:00",
+      "duration_ms": 45,
+      "status": "success"
+    },
+    {
+      "step_number": 2,
+      "step_name": "collect_grafana_context",
+      "tool_type": "grafana_mcp",
+      "action_summary": "Queried Grafana MCP for active alerts and Prometheus timeseries",
+      "tool_name": "mcp_grafana_query_prometheus",
+      "tool_input_safe": {
+        "queries": [
+          "rate(nav_recovery_loop_count[1m])",
+          "camera_delivery_fps",
+          "tf_extrinsics_error_norm",
+          "network_packet_loss_ratio"
+        ],
+        "time_range": "now-5m to now"
+      },
+      "tool_output_summary": "Prometheus telemetry: nav_recovery=7, fps dropped from 24.0 to 16.2, tf_error=0.038m, packet_loss=0.10%.",
+      "timestamp": "2026-08-25T15:11:50.341889+00:00",
+      "duration_ms": 210,
+      "status": "success"
+    },
+    {
+      "step_number": 3,
+      "step_name": "collect_grafana_logs",
+      "tool_type": "grafana_mcp",
+      "action_summary": "Queried Loki logs for service='tf2_ros_broadcaster' and service='costmap_2d'",
+      "tool_name": "mcp_grafana_query_loki",
+      "tool_input_safe": {
+        "logql": "{stage=\"stage-a\"} |= \"checksum mismatch\" or \"recovery behavior\"",
+        "limit": 20
+      },
+      "tool_output_summary": "Found 5 critical logs confirming TF checksum mismatch (0x8F4A vs 0x3E12) and costmap obstacle oscillation.",
+      "timestamp": "2026-08-25T15:11:50.341897+00:00",
+      "duration_ms": 180,
+      "status": "success"
+    },
+    {
+      "step_number": 4,
+      "step_name": "query_historical_incidents",
+      "tool_type": "bigquery",
+      "action_summary": "Searched BigQuery historical incidents for TF mismatch and nav oscillation on Stage A/B",
+      "tool_name": "bigquery_historical_search",
+      "tool_input_safe": {
+        "dataset": "cineops_guardian.incident_history",
+        "filter_symptoms": [
+          "tf_drift",
+          "lens_swap",
+          "recovery_loop"
+        ],
+        "limit": 3
+      },
+      "tool_output_summary": "Matched 2 prior incidents. Most similar: inc-stage-b-044 (94% match) resolved in 4m by reloading approved rig profile.",
+      "timestamp": "2026-08-25T15:11:50.341904+00:00",
+      "duration_ms": 310,
+      "status": "success"
+    },
+    {
+      "step_number": 5,
+      "step_name": "inspect_recording_evidence",
+      "tool_type": "mcap_inspector",
+      "action_summary": "Parsed synthetic MCAP telemetry recording /recordings/stage_a_take_003.mcap",
+      "tool_name": "mcap_inspector_extract_tf_and_poses",
+      "tool_input_safe": {
+        "mcap_uri": "gs://cineops-guardian-evidence/stage_a_take_003.mcap",
+        "topics": [
+          "/tf",
+          "/dolly/odom",
+          "/costmap/obstacles",
+          "/camera/status"
+        ]
+      },
+      "tool_output_summary": "Extracted 320 messages. Verified spatial offset (+35mm Z) between optical center and LiDAR ground plane projection.",
+      "timestamp": "2026-08-25T15:11:50.341914+00:00",
+      "duration_ms": 140,
+      "status": "success"
+    },
+    {
+      "step_number": 6,
+      "step_name": "gemini_reasoning_and_ranking",
+      "tool_type": "gemini_reasoner",
+      "action_summary": "Gemini 3.7 Flash evaluated hypotheses, ruled out network/GPU overload, and synthesized recovery plan",
+      "tool_name": "gemini_structured_investigation",
+      "tool_input_safe": {
+        "model": "gemini-3.7-flash",
+        "thinking_level": "HIGH"
+      },
+      "tool_output_summary": "Formulated 3 ranked hypotheses. Primary: Stale LiDAR/Camera TF Extrinsics (88% confidence). Safe recovery plan formulated.",
+      "timestamp": "2026-08-25T15:11:50.341920+00:00",
+      "duration_ms": 450,
+      "status": "success"
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "hyp-01",
+      "title": "Stale LiDAR / Camera TF Extrinsic Calibration After Rig Swap",
+      "rank": 1,
+      "confidence": 0.88,
+      "status": "supported",
+      "rationale": "Hardware rig change at 14:21:45 mounted 35mm Prime lens (+35mm bracket delta) without updating static transform snapshot. LiDAR point cloud projection misaligns with optical tracking, causing phantom obstacle inflation in costmap.",
+      "supporting_evidence": [
+        "Loki log confirms static transform hash mismatch (0x8F4A expected vs 0x3E12 active).",
+        "MCAP inspection reveals 0.038m extrinsic translation vector offset on Z-axis.",
+        "BigQuery historical incident inc-stage-b-044 showed identical symptoms after lens change.",
+        "Velocity command oscillation coincides precisely with obstacle proximity."
+      ],
+      "conflicting_evidence": [],
+      "missing_evidence": []
+    },
+    {
+      "id": "hyp-02",
+      "title": "Stage Wi-Fi / Private 5G Network Congestion & Packet Jitter",
+      "rank": 2,
+      "confidence": 0.12,
+      "status": "rejected",
+      "rationale": "Checked network RTT and packet loss telemetry. Network remains completely stable, ruling out network dropouts as the cause.",
+      "supporting_evidence": [],
+      "conflicting_evidence": [
+        "Prometheus network_packet_loss_ratio is at baseline 0.10% (well below 2.0% threshold).",
+        "Network RTT steady at 2.4ms with 0.3ms jitter."
+      ],
+      "missing_evidence": []
+    },
+    {
+      "id": "hyp-03",
+      "title": "Onboard Jetson GPU / Video Encoder Thermal Throttling",
+      "rank": 3,
+      "confidence": 0.08,
+      "status": "rejected",
+      "rationale": "Investigated GPU temperature and encoder queue depth. System thermals and GPU load are within nominal operating limits.",
+      "supporting_evidence": [],
+      "conflicting_evidence": [
+        "GPU core temperature steady at 62.5\u00b0C (thermal throttle point is 85.0\u00b0C).",
+        "GPU utilization at 64.0% with adequate VRAM headroom."
+      ],
+      "missing_evidence": []
+    }
+  ],
+  "production_impact": {
+    "current_take_at_risk": true,
+    "estimated_delay_minutes": 18,
+    "affected_assets": [
+      "Camera Dolly Alpha",
+      "ARRI Alexa Mini LF",
+      "OptiTrack Rig A",
+      "Stage A LED Volume"
+    ],
+    "schedule_severity": "critical",
+    "financial_burn_rate_per_hour_usd": 25000
+  },
+  "recommendations": [
+    {
+      "action_id": "act-rec-001",
+      "title": "Reload Approved Rig Calibration Profile & Verify TF Checksum",
+      "action_description": "Instruct robotic dolly controller to halt motion, reload approved calibration profile 'CALIB-RIG-2026-v4' from stage config repository, and recompute static transform matrices.",
+      "risk_level": "low",
+      "requires_approval": true,
+      "approval_status": "pending",
+      "approved_by": null,
+      "approval_timestamp": null,
+      "expected_effect": "Eliminates phantom obstacle inflation in costmap, clears navigation recovery loop, and restores 24.00 fps genlocked frame delivery.",
+      "rollback_instructions": "If TF calibration fails to converge, revert controller to safe manual e-stop mode and roll back to baseline snapshot 'CALIB-RIG-2026-v3'.",
+      "success_criteria": [
+        "Static TF checksum matches approved profile CRC 0x8F4A.",
+        "Localization confidence increases above 0.85.",
+        "Navigation recovery loop count drops to 0.",
+        "Camera frame rate stabilizes at 24.00 fps."
+      ]
+    }
+  ],
+  "historical_matches": [
+    {
+      "incident_id": "inc-stage-b-044",
+      "date": "2026-08-10",
+      "stage": "Stage B \u2014 Virtual Volume",
+      "asset_id": "dolly-bravo-02",
+      "scene_take": "Scene 18 Take 2",
+      "symptoms": "Lens swap to 50mm Anamorphic caused dolly avoidance jitter and dropped camera sync.",
+      "confirmed_root_cause": "Stale URDF TF matrix between optical nodal point and base LiDAR.",
+      "action_taken": "Reloaded approved calibration profile CALIB-RIG-STAGE-B-v2.",
+      "delay_minutes": 4,
+      "similarity_score": 0.94
+    },
+    {
+      "incident_id": "inc-stage-a-019",
+      "date": "2026-07-28",
+      "stage": "Stage A \u2014 Virtual Volume",
+      "asset_id": "dolly-alpha-01",
+      "scene_take": "Scene 09 Take 5",
+      "symptoms": "Dolly paused during rapid dolly-in near lighting scaffold with costmap warning.",
+      "confirmed_root_cause": "LiDAR mount vibration loosening + 20mm extrinsic calibration shift.",
+      "action_taken": "Tightened mount bracket and executed recalibration script.",
+      "delay_minutes": 7,
+      "similarity_score": 0.82
+    }
+  ],
+  "evidence_links": {
+    "grafana_dashboard": "https://cineops.grafana.net/d/stage-a-dolly/camera-dolly-stage-a?orgId=1",
+    "foxglove_recording": "/api/v1/incidents/inc-stage-a-001/recording.mcap",
+    "bigquery_table": "https://console.cloud.google.com/bigquery?project=project-55fbcfd2-0ad6-4c99-a25&p=cineops_guardian&d=incident_history"
+  },
+  "post_recovery_telemetry": null,
+  "resolution_summary": null
+}
