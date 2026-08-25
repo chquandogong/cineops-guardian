@@ -54,3 +54,7 @@ gcp_credentials.json
 # Project Temporary
 synthetic/recordings/*.tmp
 *.log
+.gstack/
+.playwright-mcp/
+scratch/
+*.png

@@ -1,5 +1,11 @@
 # CineOps Guardian 🎬🤖
 
+<div align="center">
+
+[![Language: English](https://img.shields.io/badge/Language-English-blue.svg)](README.md)
+[![Language: 한국어](https://img.shields.io/badge/Language-한국어-red.svg)](README_KO.md)
+[![Language: 简体中文](https://img.shields.io/badge/Language-简体中文-orange.svg)](README_ZH.md)
+
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Gemini 3.7 Flash](https://img.shields.io/badge/AI-Gemini%203.7%20Flash%20(High%20Thinking)-cyan.svg)](https://deepmind.google/technologies/gemini/)
@@ -7,8 +13,12 @@
 [![Foxglove MCAP](https://img.shields.io/badge/Robotics-Foxglove%20MCAP-purple.svg)](https://mcap.dev/)
 [![Docker Ready](https://img.shields.io/badge/Container-Docker%20Ready-green.svg)](https://www.docker.com/)
 
+**[ 🇺🇸 English ](README.md) | [ 🇰🇷 한국어 ](README_KO.md) | [ 🇨🇳 简体中文 ](README_ZH.md)**
+
 > **AI-Powered Observability & Incident Recovery Agent for Virtual Production Stages and Robotic Camera Fleets.**  
 > *Built for the Agentic Cinema Hackathon — Grafana Labs Partner Track.*
+
+</div>
 
 ---
 
