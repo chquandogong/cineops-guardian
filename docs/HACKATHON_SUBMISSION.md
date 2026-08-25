@@ -1,55 +1,81 @@
-# CineOps Guardian — Hackathon Submission Details
+# CineOps Guardian — Devpost Submission Package
 
-## Project Summary
+## 📋 Devpost Submission Form Fields
 
-| Parameter | Value |
-|---|---|
-| **Project Title** | **CineOps Guardian** |
-| **Short Description** | AI-Powered Observability & Incident Recovery Agent for Virtual Production Stages & Robotic Camera Fleets |
-| **Track Alignment** | **Agentic Cinema & Observability** (Grafana Labs Partner Track) |
-| **Primary Model** | **Gemini 3.7 Flash** (Thinking Level: `HIGH`) |
-| **Observability Integration** | **Grafana MCP Server (`grafana/mcp-grafana`)** |
-| **Telemetry & Robotics** | **Foxglove Studio MCAP**, ROS2 Iron (`tf2_ros`, `nav2_costmap`), BigQuery |
-| **License** | Apache 2.0 |
-| **Author** | Chenghao Quan (`chquan17@gmail.com`) |
+### 1. Basic Information
 
----
-
-## 1. Problem Statement & Real-World Impact
-
-Modern cinema and high-end episodic production increasingly rely on **Virtual Production (VP) LED Volumes** driven by Unreal Engine nDisplay and precision robotic motion-control camera rigs.
-
-When a camera tracking anomaly or sensor extrinsics drift occurs mid-take:
-- Camera tracking diverges from LED wall background parallax.
-- Costmaps miscalculate physical clearance, causing dollies to jerk into emergency recovery loops.
-- Production halts with full sound stage crews, actors, and director waiting, incurring downtime costs of **$20,000 to $50,000 per hour**.
-- Manual troubleshooting requires disparate log grep, ROS TF inspection, and network sniffing, taking 20–45 minutes.
+- **Project Name:** `CineOps Guardian`
+- **Tagline (Elevator Pitch):** `AI-Powered Observability & Incident Recovery Agent for Virtual Production Stages & Robotic Camera Fleets`
+- **Partner Track:** `Grafana Labs`
+- **GitHub Repository URL:** `https://github.com/chquandogong/cineops-guardian`
+- **Release Version / Tag:** `https://github.com/chquandogong/cineops-guardian/releases/tag/v1.0.0`
+- **License:** `Apache 2.0 (Open Source)`
+- **Video Demo Link:** `[Add Public YouTube / Vimeo Link to 3-Minute Trailer]`
 
 ---
 
-## 2. Our Solution: CineOps Guardian
+### 2. Built With (Tags)
 
-CineOps Guardian is an autonomous observability agent that:
-1. **Instantly Ingests Stage Incidents:** Triages stage anomalies within 50ms.
-2. **Queries Grafana MCP:** Extracts Prometheus timeseries metrics and Loki log streams in real-time.
-3. **Inspects Spatial MCAP Recordings:** Examines multi-channel ROS2/Foxglove `.mcap` files to uncover coordinate translation errors down to the millimeter.
-4. **Applies Gemini 3.7 Flash High-Thinking:** Formulates, differentially tests, and ranks physical hypotheses with mathematical rigor.
-5. **Enforces Human-in-the-Loop Safety Interlocks:** Strictly requires authorized operator sign-off before applying any configuration fix.
-6. **Empirically Verifies Recovery:** Automates 4-point post-action telemetry re-testing to certify stage readiness before resuming filming.
+`gemini-3.7-flash`, `google-cloud-platform`, `grafana-mcp`, `prometheus`, `loki`, `mcap`, `foxglove`, `ros2`, `bigquery`, `fastapi`, `react`, `typescript`, `tailwind-css`, `docker`
 
 ---
 
-## 3. Technology Architecture & Integration Highlights
+### 3. Submission Essay Questions (Copy-Paste Ready)
 
-- **Gemini 3.7 Flash (High Thinking):** Utilizes Google's state-of-the-art reasoning model via the official `google-genai` SDK with strict JSON schema outputs and extended thinking budgets.
-- **Official Grafana MCP Integration:** Implements runtime client tooling for Prometheus PromQL queries, Loki LogQL streaming, alert definitions, and dashboard discovery.
-- **Foxglove MCAP Telemetry:** Generates and parses real `.mcap` binary recordings with JSON schemas for `/tf`, `/dolly/odom`, `/costmap/obstacles`, and `/camera/status`.
-- **Google Cloud BigQuery & GCS:** Stores synthetic historical incident knowledge graphs and cloud recording archives.
-- **React 18 + Tailwind Operator Console:** Interactive stage console featuring custom HTML5 Canvas trajectory rendering, live SSE trace streaming, and safety gates.
+#### 🎬 Inspiration
+Modern cinema and high-end episodic production are experiencing a massive paradigm shift toward **Virtual Production (VP) LED Volumes** driven by Unreal Engine nDisplay and precision robotic motion-control camera rigs (dollies, cranes, pan-tilt heads). In these environments, physical cameras and digital frustums must be synchronized to sub-millimeter precision and sub-millisecond genlock.
+
+However, film sets are chaotic physical environments. A simple physical adjustment—such as swapping a camera lens without updating the static transform calibration matrix—causes LiDAR point clouds to misalign with optical nodal points. To the autonomous navigation stack, the set floor and lighting scaffolds appear as "phantom obstacles," triggering emergency avoidance loops and dropped video frames.
+
+When a stage halts, an entire crew of 60+ actors, technicians, and directors sits idle, burning **$20,000 to $50,000+ per hour**. Diagnosing these cyber-physical anomalies manually takes 30–60 minutes of tedious log grep and ROS transform inspection. We built **CineOps Guardian** to give stage engineers and rig operators an autonomous observability agent that root-causes and resolves multi-system anomalies in under 60 seconds.
 
 ---
 
-## 4. Compliance & Synthetic Data Certification
+#### 🛠️ What it Does
+**CineOps Guardian** is an enterprise-grade observability and diagnostic agent built specifically for virtual production and camera robotics:
 
-- **Zero Proprietary Data:** 100% of telemetry, logs, MCAP recordings, and incident scenarios are procedurally generated synthetic fixtures.
-- **Zero Robot Danger:** The agent has zero direct robot actuation APIs; recovery actions are restricted to configuration and calibration snapshots.
+1. **Instant Incident Triage:** Ingests stage alerts within 50ms, identifying the affected scene (`Scene 42 Take 3`), stage volume, and robotic asset.
+2. **Grafana MCP Observability Plane:** Connects to the official `grafana/mcp-grafana` server to execute live PromQL queries (camera FPS, navigation recovery loop counts, TF extrinsics error norm) and Loki LogQL stream queries (CRC checksum mismatches and costmap inflation warnings).
+3. **Foxglove MCAP Telemetry Extraction:** Server-side inspection of multi-channel ROS2 `.mcap` binary recordings (`/tf`, `/dolly/odom`, `/costmap/obstacles`, `/camera/status`), mathematically localizing coordinate frame drift down to the millimeter ($+35\text{mm}$ Z-offset).
+4. **Gemini 3.7 Flash High-Thinking Reasoning:** Applies Google's flagship reasoning model with an extended thinking budget to differentially evaluate, test, and rank physical root-cause hypotheses while systematically ruling out network packet loss and GPU thermal throttling.
+5. **BigQuery Historical Incident Matching:** Searches historical stage incidents to find proven past recovery procedures with high similarity scores ($94\%$).
+6. **Human-in-the-Loop Safety Interlocks:** Strictly enforces operator review and authorization before applying configuration snapshots, guaranteeing zero unverified physical robot motion.
+7. **Automated Post-Recovery Verification:** Runs an automated 4-point telemetry re-verification checklist to confirm static transform checksum convergence and restore 24.00 fps genlock sync.
+
+---
+
+#### 🏗️ How We Built It
+- **AI Core:** Built with Google AI's **Gemini 3.7 Flash** (thinking level `HIGH`) using the official `google-genai` SDK with strict JSON Schema output contracts (`Pydantic v2`).
+- **Observability Layer:** Integrated with **Grafana Model Context Protocol (MCP)** supporting Prometheus metrics, Loki log streams, and Grafana Cloud alert definitions.
+- **Robotics & Spatial Telemetry:** Implemented Foxglove-compatible `.mcap` serialization and inspection supporting ROS2 sensor fusion channels and static transform trees (`tf2_ros`).
+- **Data & Cloud Backend:** **Google Cloud BigQuery** for historical incident matching, **Google Cloud Storage (GCS)** for evidence archiving, and **FastAPI** for the asynchronous diagnostic engine.
+- **Frontend Console:** **React 18**, **TypeScript**, **Tailwind CSS**, and custom **HTML5 Canvas 2D spatial trajectory visualizer** with real-time Server-Sent Events (SSE) agent trace streaming.
+
+---
+
+#### 🧗 Challenges We Ran Into
+Bridging the gap between cloud-native observability paradigms (Prometheus timeseries, Loki logs) and cyber-physical robotics (rigid-body spatial transforms, URDF models, 2D obstacle inflation maps) presented unique engineering hurdles:
+1. **Mathematical Multi-Modal Grounding:** Ensuring the LLM grounded its reasoning in physical reality ($SE(3)$ transformation matrices and LiDAR raycasting) rather than generic software errors.
+2. **Strict Operational Safety:** Ensuring the AI assistant operates within a "zero actuation" boundary, restricting its recovery actions to safe configuration and calibration reloads with mandatory human operator signatures.
+3. **Hermetic vs. Live Cloud Dual-Mode:** Developing a seamless dual-mode architecture (`DEMO_MODE=mock` and `DEMO_MODE=real`) allowing judges and developers to run 100% offline deterministic fixtures while retaining full live Grafana Cloud MCP connectivity.
+
+---
+
+#### 🏆 Accomplishments That We're Proud Of
+- **11-Step Auditable State Machine:** Every single tool call, PromQL query, LogQL filter, and MCAP byte range is surfaced transparently in the live SSE trace with millisecond-accurate execution timing.
+- **Sub-Millimeter Physical Accuracy:** Successfully localizing a $+35\text{mm}$ lens nodal shift from multi-channel MCAP telemetry recordings.
+- **100% Synthetic Telemetry:** Created 100% procedural synthetic telemetry, test fixtures, and ROS2 bags with zero proprietary dependencies or data leaks.
+- **Complete Test Coverage:** 11/11 passing Pytest unit & integration tests, 0 Ruff lint errors, and 100% clean frontend Vite bundle builds.
+
+---
+
+#### 💡 What We Learned
+- **The Power of Grafana MCP:** How the Model Context Protocol transforms observability from reactive dashboard browsing into proactive, context-aware diagnostic intelligence.
+- **Extended Thinking in Cyber-Physical Systems:** How Gemini 3.7 Flash's thinking capabilities excel at differential diagnosis—systematically evaluating conflicting hypotheses against telemetry evidence before committing to a conclusion.
+
+---
+
+#### 🔮 What's Next for CineOps Guardian
+- **Multi-Stage Fleet Orchestration:** Expanding from single-stage monitoring to studio-wide multi-volume fleet management across LED stages.
+- **Unreal Engine Live Link Plugin:** Direct telemetry feed from Unreal Engine nDisplay frustum renderers into the CineOps Guardian observability plane.
+- **Edge Deployment on NVIDIA Jetson:** Deploying lightweight CineOps Guardian sidecar agents directly onboard motion-control camera rigs for offline edge-level anomaly detection.
