@@ -8,7 +8,12 @@ RUN npm ci || npm install
 COPY frontend/ ./frontend/
 RUN npm run build
 
-# Stage 2: Runtime Backend & App Container
+# Stage 2: Official Grafana MCP server binary (spawned over stdio by the agent)
+FROM golang:1.26-bookworm AS mcp-builder
+ENV CGO_ENABLED=0
+RUN GOBIN=/out go install github.com/grafana/mcp-grafana/cmd/mcp-grafana@v1.2.0
+
+# Stage 3: Runtime Backend & App Container
 FROM python:3.12-slim AS runner
 WORKDIR /app
 
@@ -22,6 +27,7 @@ RUN pip install --no-cache-dir --upgrade pip &&     pip install --no-cache-dir .
 COPY backend/ ./backend/
 COPY synthetic/ ./synthetic/
 COPY --from=frontend-builder /build/frontend/dist ./frontend/dist
+COPY --from=mcp-builder /out/mcp-grafana /usr/local/bin/mcp-grafana
 
 # Pre-generate synthetic MCAP recording inside container
 RUN python -c "from backend.app.integrations.mcap.generator import generate_synthetic_mcap; generate_synthetic_mcap('synthetic/recordings/stage_a_take_003.mcap')"

@@ -54,7 +54,14 @@ export interface LokiLogEntry {
 export interface ToolTraceEntry {
   step_number: number;
   step_name: string;
-  tool_type: 'grafana_mcp' | 'bigquery' | 'mcap_inspector' | 'gemini_reasoner' | 'system';
+  tool_type:
+    | 'grafana_mcp'
+    | 'bigquery'
+    | 'mcap_inspector'
+    | 'gemini_reasoner'
+    | 'foxglove'
+    | 'gcs'
+    | 'system';
   action_summary: string;
   tool_name: string;
   tool_input_safe: Record<string, any>;

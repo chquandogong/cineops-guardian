@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     FOXGLOVE_API_KEY: str = "fox_sk_placeholder"
     FOXGLOVE_ORG_SLUG: str = "your-org"
 
+    # Model Context Protocol
+    # Path to the official grafana/mcp-grafana binary, spawned over stdio. The
+    # container installs it at /usr/local/bin/mcp-grafana.
+    MCP_GRAFANA_BINARY: str = "/usr/local/bin/mcp-grafana"
+
     # Stage Metadata
     DEFAULT_STAGE_ID: str = "stage-a-virtual-prod"
     DEFAULT_ROBOT_ID: str = "dolly-alpha-01"

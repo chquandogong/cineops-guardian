@@ -60,7 +60,15 @@ class LokiLogEntry(BaseModel):
 class ToolTraceEntry(BaseModel):
     step_number: int
     step_name: str
-    tool_type: Literal["grafana_mcp", "bigquery", "mcap_inspector", "gemini_reasoner", "system"]
+    tool_type: Literal[
+        "grafana_mcp",
+        "bigquery",
+        "mcap_inspector",
+        "gemini_reasoner",
+        "foxglove",
+        "gcs",
+        "system",
+    ]
     action_summary: str
     tool_name: str
     tool_input_safe: dict[str, Any]
