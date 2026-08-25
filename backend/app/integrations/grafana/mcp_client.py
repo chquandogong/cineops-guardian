@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Any
 
 import httpx
@@ -18,6 +19,9 @@ class GrafanaMCPClient:
         self.base_url = settings.GRAFANA_URL
         self.token = settings.GRAFANA_SERVICE_ACCOUNT_TOKEN
         self.mcp_url = settings.GRAFANA_MCP_URL
+        self.prom_ds_uid = settings.GRAFANA_PROM_DS_UID
+        self.loki_ds_uid = settings.GRAFANA_LOKI_DS_UID
+        self.loki_lookback_days = settings.GRAFANA_LOKI_LOOKBACK_DAYS
 
     async def get_alert_rules(self, stage_id: str = "stage-a") -> list[dict[str, Any]]:
         if self.mode == "mock" or not self.token or self.token.startswith("glsa_placeholder"):
@@ -45,7 +49,7 @@ class GrafanaMCPClient:
                 headers = {"Authorization": f"Bearer {self.token}"}
                 params = {"query": query}
                 resp = await client.get(
-                    f"{self.base_url}/api/datasources/proxy/uid/prometheus/api/v1/query",
+                    f"{self.base_url}/api/datasources/proxy/uid/{self.prom_ds_uid}/api/v1/query",
                     headers=headers,
                     params=params,
                 )
@@ -62,9 +66,19 @@ class GrafanaMCPClient:
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 headers = {"Authorization": f"Bearer {self.token}"}
-                params = {"query": logql, "limit": limit}
+                # Loki's query_range defaults to a 1h lookback, which is shorter
+                # than the lifetime of a demo stage recording. Ask explicitly for
+                # the retention window so seeded stage telemetry stays queryable.
+                now_ns = time.time_ns()
+                params = {
+                    "query": logql,
+                    "limit": limit,
+                    "start": str(now_ns - self.loki_lookback_days * 86_400 * 1_000_000_000),
+                    "end": str(now_ns),
+                    "direction": "backward",
+                }
                 resp = await client.get(
-                    f"{self.base_url}/api/datasources/proxy/uid/loki/loki/api/v1/query_range",
+                    f"{self.base_url}/api/datasources/proxy/uid/{self.loki_ds_uid}/loki/api/v1/query_range",
                     headers=headers,
                     params=params,
                 )

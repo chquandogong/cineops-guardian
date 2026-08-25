@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     GRAFANA_SERVICE_ACCOUNT_TOKEN: str = "glsa_placeholder"
     GRAFANA_MCP_URL: str = "http://localhost:8000"
     GRAFANA_STACK_ID: str = "123456"
+    # Datasource UIDs used by the Grafana datasource proxy. Grafana Cloud stacks
+    # provision these as `grafanacloud-prom` / `grafanacloud-logs`; self-hosted
+    # Grafana commonly uses `prometheus` / `loki`.
+    GRAFANA_PROM_DS_UID: str = "grafanacloud-prom"
+    GRAFANA_LOKI_DS_UID: str = "grafanacloud-logs"
+    # Loki query_range lookback. Defaults past the 1h Loki default so stage
+    # telemetry recorded earlier in a shoot day is still returned.
+    GRAFANA_LOKI_LOOKBACK_DAYS: int = 7
     GRAFANA_OTLP_ENDPOINT: str = "https://otlp-gateway-prod-us-east-0.grafana.net/otlp"
     GRAFANA_OTLP_USERNAME: str = "123456"
     GRAFANA_OTLP_TOKEN: str = "glc_placeholder"
