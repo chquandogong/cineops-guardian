@@ -1,12 +1,13 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.health import router as health_router
 from backend.app.api.router import api_router
+from backend.app.instance import instance_id
 from backend.app.settings import settings
 
 app = FastAPI(
@@ -22,6 +23,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def tag_serving_instance(request: Request, call_next):
+    """Names the instance that answered, so shared state is observable."""
+    response = await call_next(request)
+    response.headers["X-Instance-Id"] = instance_id()
+    return response
+
 
 app.include_router(health_router)
 app.include_router(api_router)

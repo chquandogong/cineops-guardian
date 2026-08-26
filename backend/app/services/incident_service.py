@@ -95,9 +95,7 @@ class IncidentService:
 
     async def approve_recovery(self, action_id: str, operator_name: str) -> Incident:
         current = await self.store.load(DEFAULT_INCIDENT_ID)
-        incident = await self.recovery_service.execute_recovery(
-            current, action_id, operator_name
-        )
+        incident = await self.recovery_service.execute_recovery(current, action_id, operator_name)
         await self.store.save(incident)
         return incident
 
