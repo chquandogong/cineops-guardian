@@ -284,20 +284,40 @@ foxglove_create_eventArguments metadata.err …
 
 ### So what does the agent "see"?
 
-**Not pixels.** The agent has no view of the Foxglove UI and no video
-understanding of the recording. What it sees of Foxglove is a small set of typed
-capabilities and their JSON answers — device ids, recording ids, byte counts,
-event ids.
+**Of Foxglove itself: not pixels.** The agent has no view of the Foxglove UI and
+no video understanding of the stored bag. What it sees of Foxglove is a small set
+of typed capabilities and their JSON answers — device ids, recording ids, byte
+counts, event ids.
 
-The _spatial_ understanding comes from somewhere else entirely: the
-`inspect_mcap_recording` tool parses the ROS2 bag server-side and returns measured
-numbers — per-topic message counts, the TF translation delta on each axis, costmap
-obstacle distances, camera frame rate. The agent reasons over those measurements.
+**Of the telemetry: an actual picture.** `inspect_mcap_recording` returns measured
+numbers, but numbers are a poor way to recognise a *shape*. An oscillating
+avoidance loop is a smooth traverse that collapses into a tight zig-zag at one
+specific point — obvious to a rig operator at a glance, easy to miss in a min/max
+table. So `render_spatial_evidence` draws the same telemetry server-side and
+returns it as MCP **image content**: a top-down view of the dolly path against the
+costmap inflation blocking it, the TF Z-translation against its approved value,
+and camera frame rate against target.
 
-Foxglove's role in the loop is to make the same evidence available to a **human**
-in a form a human can actually judge: the real bag, on a timeline, annotated at
-the moment the agent flagged. The agent measures; Foxglove is how it shows a rig
-operator where to look.
+The router decodes that image and the agent attaches it to the model turn as an
+inline image part, so Gemini looks at it. The prompt asks the model to say where
+the path stops being smooth and what it is avoiding when it does — and explicitly
+not to describe an image it was not shown.
+
+```python
+# backend/app/agents/mcp_agent.py — a rendered frame cannot ride inside a
+# function response, so it is attached to the same turn as an image part
+for blob, mime in result.images:
+    response_parts.append(types.Part.from_bytes(data=blob, mime_type=mime))
+```
+
+Rendering is pure Pillow with Pillow's scalable default font: no plotting stack,
+no system font dependency in `python:slim`, and deterministic output so the
+offline demo still reproduces byte for byte.
+
+**And Foxglove's role in the loop is the human half of the same evidence.** The
+agent measures and now also looks; Foxglove is how it hands a rig operator the
+real bag, on a timeline, annotated at the moment it flagged — so a person can
+check its work rather than take its word.
 
 ---
 

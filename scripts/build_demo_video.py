@@ -48,8 +48,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "Stage A halted — <b>Scene 42 Take 3</b>, burning <b>$25,000/hr</b>",
         "action": "show_header",
         "text": (
-            "CineOps Guardian picks up the stage alert and opens a P1 incident against "
-            "the dolly, with the scene and take it is holding up."
+            "CineOps Guardian picks up the alert and opens a P1 incident against the "
+            "dolly."
         ),
     },
     {
@@ -87,9 +87,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "Agent discovers datasource UIDs, then queries <b>PromQL</b> and <b>LogQL</b>",
         "action": "follow_trace",
         "text": (
-            "It starts by listing the Grafana datasources rather than assuming their "
-            "identifiers, then queries Prometheus and Loki through the Grafana MCP server "
-            "for the metrics and log lines it actually wants."
+            "It lists the Grafana datasources rather than assuming their identifiers, "
+            "then queries Prometheus and Loki through the Grafana MCP server."
         ),
     },
     {
@@ -97,9 +96,20 @@ SCENES: list[dict[str, str]] = [
         "caption": "MCAP inspected before any spatial claim — <b>+35mm Z offset</b> measured",
         "action": "follow_trace",
         "text": (
-            "Before claiming any physical root cause, the agent inspects the ROS2 MCAP "
-            "recording and measures the transform offset itself: a plus thirty-five "
-            "millimetre shift on the Z axis between the camera optical frame and the LiDAR."
+            "Before claiming a physical root cause, it inspects the ROS2 MCAP recording "
+            "and measures the offset itself: plus thirty-five millimetres on the Z axis "
+            "between the camera optical frame and the LiDAR."
+        ),
+    },
+    {
+        "id": "vision",
+        "caption": "Then it <b>renders the telemetry and looks at it</b> — MCP image content",
+        "action": "follow_trace",
+        "text": (
+            "Then it does something numbers cannot do for it. It renders that telemetry "
+            "and looks at the frame. In its own words, the trajectory breaks from a "
+            "linear nominal path into tight zig-zag recovery loops centred on the "
+            "phantom obstacle. That shape is the diagnosis."
         ),
     },
     {
@@ -107,9 +117,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "<b>BigQuery</b> history: a prior take failed the same way",
         "action": "follow_trace",
         "text": (
-            "It then searches the BigQuery incident history and finds this has happened "
-            "before, along with the recovery that fixed it, so a proven procedure gets "
-            "reused instead of invented."
+            "It searches the BigQuery incident history and finds this has happened "
+            "before, along with the recovery that fixed it."
         ),
     },
     {
@@ -117,9 +126,9 @@ SCENES: list[dict[str, str]] = [
         "caption": "Agent publishes the bag to <b>Foxglove</b> itself",
         "action": "follow_trace",
         "text": (
-            "The agent also preserves the evidence on its own initiative. It archives the "
-            "recording to Cloud Storage and uploads the bag to the Foxglove Data Platform, "
-            "so a rig operator can scrub the real telemetry rather than take its word."
+            "It preserves the evidence on its own initiative: archiving the recording to "
+            "Cloud Storage and uploading the bag to Foxglove, so a rig operator can scrub "
+            "the real telemetry rather than take its word."
         ),
     },
     {
@@ -127,10 +136,9 @@ SCENES: list[dict[str, str]] = [
         "caption": "Ranked hypotheses — alternatives <b>rejected against telemetry</b>",
         "action": "show_hypotheses",
         "text": (
-            "Only then does it commit to a ranked diagnosis: stale LiDAR to camera "
-            "calibration after the lens swap. Network congestion and GPU thermal "
-            "throttling are not dismissed by assertion. They are rejected against the "
-            "telemetry it pulled."
+            "Only then does it commit: stale LiDAR to camera calibration after the lens "
+            "swap. The alternatives are not dismissed by assertion — they are rejected "
+            "against the telemetry it pulled."
         ),
     },
     {

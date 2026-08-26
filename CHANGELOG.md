@@ -1,5 +1,41 @@
 # Changelog
 
+## v2.1.0 — the agent looks at the telemetry
+
+The agent reasoned only over summary statistics. An oscillating avoidance loop is
+a *shape* — a smooth traverse that collapses into a tight zig-zag at one specific
+point — obvious to a rig operator at a glance, easy to miss in a min/max table.
+
+### Added
+
+- **`render_spatial_evidence`** MCP tool. Draws the ROS2 MCAP telemetry
+  server-side and returns MCP **image content**: a top-down view of the dolly path
+  against the costmap inflation blocking it, the TF Z-translation against its
+  approved value, and camera frame rate against target.
+- **Image transport through the whole chain.** `MCPToolRouter.call()` now returns
+  an `MCPCallResult` carrying decoded image bytes alongside the text, and the
+  agent attaches them to the model turn as inline image parts — a rendered frame
+  cannot ride inside a function response.
+- `MCAPInspector.read_channels()`, so the summary and the render share one pass
+  over the file.
+- Pillow dependency. Rendering is pure Pillow with Pillow's scalable default
+  font: no plotting stack, no system font dependency in `python:slim`, and
+  deterministic output so the offline demo still reproduces.
+
+### Changed
+
+- The agent prompt asks the model to say where the path stops being smooth and
+  what it is avoiding when it does — and explicitly not to describe an image it
+  was not shown.
+
+### Verified
+
+On the deployed service the model called `render_spatial_evidence` unprompted at
+step 4 and cited what it saw in its own supporting evidence:
+
+> "Rendered spatial frame shows linear nominal cyan trajectory breaking into tight
+> amber zig-zag recovery loops centered around phantom obstacle"
+
 ## v2.0.0 — MCP-native agent
 
 The investigation is no longer a fixed pipeline with a model bolted on. Gemini
