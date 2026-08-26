@@ -11,9 +11,17 @@ the end of the video. This script inverts the dependency:
 3. Record the wall-clock offset at which each scene actually started.
 4. Mix each clip in at its recorded offset, so audio and picture cannot drift.
 
+One subtlety: the recorder starts its clock after the page has loaded, but the
+video starts when the browser context is created. Every scene offset is therefore
+late by that gap, and mixing without it puts the whole narration about two seconds
+ahead of the picture. The recorder writes the gap into the plan as
+``video_offset_seconds``; ``--offset`` overrides it for a plan recorded before
+that existed.
+
 Usage:
     python scripts/build_demo_video.py            # full build
     python scripts/build_demo_video.py --audio    # narration only (fast check)
+    python scripts/build_demo_video.py --mix plan.json in.webm out.mp4 --offset 2.0
 """
 
 import argparse
@@ -234,20 +242,29 @@ async def synthesize() -> list[dict]:
     return plan
 
 
-def mix(plan_path: str, video_path: str, out_path: str) -> None:
-    """Overlays each narration clip at the scene offset the recorder measured."""
+def mix(plan_path: str, video_path: str, out_path: str, offset: float | None = None) -> None:
+    """Overlays each narration clip at the scene offset the recorder measured.
+
+    ``offset`` shifts every clip later by the gap between the video's first frame
+    and the recorder's own clock. Without it the narration leads the picture.
+    """
     with open(plan_path) as handle:
         plan = json.load(handle)
     offsets = [p for p in plan if p.get("actual_start_seconds") is not None]
     if not offsets:
         raise SystemExit("plan.json has no actual_start_seconds; run the recorder first")
+    if offset is None:
+        offset = next(
+            (p["video_offset_seconds"] for p in plan if p.get("video_offset_seconds")), 0.0
+        )
+    print(f"  video offset {offset:.2f}s applied to every clip")
 
     inputs: list[str] = ["-i", video_path]
     filters: list[str] = []
     labels: list[str] = []
     for slot, item in enumerate(offsets, start=1):
         inputs += ["-i", item["clip"]]
-        delay_ms = int(item["actual_start_seconds"] * 1000)
+        delay_ms = int((item["actual_start_seconds"] + offset) * 1000)
         filters.append(f"[{slot}:a]adelay={delay_ms}|{delay_ms},aresample=48000[a{slot}]")
         labels.append(f"[a{slot}]")
     filters.append(
@@ -255,16 +272,32 @@ def mix(plan_path: str, video_path: str, out_path: str) -> None:
     )
     filter_complex = ";".join(filters)
 
+    # -shortest would cut the picture at the last spoken word, clipping the closing
+    # card. Let the video run to its own end instead, and refuse to mix if the
+    # narration would run past it — that is a recording too short for its script.
+    video_seconds = ffprobe_duration(video_path)
+    audio_end = max(
+        item["actual_start_seconds"] + offset + item["narration_seconds"] for item in offsets
+    )
+    if audio_end > video_seconds + 0.05:
+        raise SystemExit(
+            f"narration ends at {audio_end:.2f}s but the video is only "
+            f"{video_seconds:.2f}s; re-record before mixing"
+        )
+
     cmd = [
         "ffmpeg", "-v", "error", *inputs,
         "-filter_complex", filter_complex,
         "-map", "0:v:0", "-map", "[mixed]",
         "-c:v", "libx264", "-preset", "slow", "-crf", "20", "-pix_fmt", "yuv420p", "-r", "30",
         "-movflags", "+faststart", "-c:a", "aac", "-b:a", "192k",
-        "-shortest", out_path, "-y",
+        out_path, "-y",
     ]
     subprocess.run(cmd, check=True)
-    print(f"mixed -> {out_path} ({ffprobe_duration(out_path):.2f}s)")
+    print(
+        f"mixed -> {out_path} ({ffprobe_duration(out_path):.2f}s; "
+        f"narration ends {audio_end:.2f}s, tail {video_seconds - audio_end:.2f}s)"
+    )
 
 
 def main() -> None:
@@ -272,10 +305,12 @@ def main() -> None:
     parser.add_argument("--audio", action="store_true", help="synthesize narration only")
     parser.add_argument("--mix", nargs=3, metavar=("PLAN", "VIDEO", "OUT"),
                         help="mix narration into a recorded video")
+    parser.add_argument("--offset", type=float, default=None,
+                        help="seconds between the video's first frame and the recorder's clock")
     args = parser.parse_args()
 
     if args.mix:
-        mix(*args.mix)
+        mix(*args.mix, offset=args.offset)
         return
     asyncio.run(synthesize())
     if not args.audio:
