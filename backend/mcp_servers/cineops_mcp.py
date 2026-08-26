@@ -18,11 +18,12 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
-from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver import Image, MCPServer
 
 from backend.app.integrations.bigquery.client import BigQueryHistoricalClient
 from backend.app.integrations.gcs.client import GCSClient
 from backend.app.integrations.mcap.inspector import MCAPInspector
+from backend.app.integrations.mcap.renderer import render_spatial_evidence
 from backend.app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,24 @@ def inspect_mcap_recording() -> dict[str, Any]:
     summary = inspector.extract_evidence_summary()
     summary["local_path"] = inspector.mcap_path
     return summary
+
+
+@server.tool(
+    name="render_spatial_evidence",
+    description=(
+        "Render the ROS2 MCAP telemetry as an annotated image and return it, so you "
+        "can look at the incident instead of only reading numbers. The frame shows a "
+        "top-down view of the dolly's path against the costmap inflation that is "
+        "blocking it, plus the TF Z-translation against its approved value and the "
+        "camera frame rate against target. Use it to judge the *shape* of the "
+        "failure — a smooth traverse that turns into a tight zig-zag at a specific "
+        "point is what an oscillating avoidance loop looks like, and is hard to see "
+        "in summary statistics. Describe what you actually observe in the image."
+    ),
+)
+def render_spatial_evidence_tool() -> Image:
+    channels = MCAPInspector().read_channels()
+    return Image(data=render_spatial_evidence(channels), format="png")
 
 
 # --------------------------------------------------------------------------- #

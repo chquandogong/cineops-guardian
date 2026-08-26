@@ -15,6 +15,7 @@ Every tool the agent invokes therefore travels over MCP; nothing calls a vendor
 REST API directly from the agent loop.
 """
 
+import base64
 import logging
 import os
 import shutil
@@ -50,6 +51,15 @@ class MCPTool:
     name: str
     description: str
     input_schema: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class MCPCallResult:
+    """What a tool returned: its text, any rendered frames, and whether it failed."""
+
+    text: str
+    images: list[tuple[bytes, str]] = field(default_factory=list)
+    is_error: bool = False
 
 
 class MCPUnavailableError(RuntimeError):
@@ -158,24 +168,41 @@ class MCPToolRouter:
             for tool in self.tools
         ]
 
-    async def call(self, tool_name: str, arguments: dict[str, Any]) -> tuple[str, bool]:
-        """Invokes an MCP tool. Returns (text_result, is_error)."""
+    async def call(self, tool_name: str, arguments: dict[str, Any]) -> MCPCallResult:
+        """Invokes an MCP tool and returns its text, any images, and error state."""
         server_name = self.server_of(tool_name)
         if server_name is None:
-            return f"unknown tool {tool_name!r}", True
+            return MCPCallResult(text=f"unknown tool {tool_name!r}", is_error=True)
         session = self._sessions[server_name]
         try:
             result = await session.call_tool(tool_name, arguments or {})
         except Exception as e:  # noqa: BLE001 - surface tool failure to the model
             logger.warning("MCP call %s.%s failed: %s", server_name, tool_name, e)
-            return f"tool call failed: {e}", True
+            return MCPCallResult(text=f"tool call failed: {e}", is_error=True)
 
         chunks: list[str] = []
+        images: list[tuple[bytes, str]] = []
         for content in result.content:
             text = getattr(content, "text", None)
             if text:
                 chunks.append(text)
-        payload = "\n".join(chunks) or "(no textual content returned)"
+                continue
+            # MCP image content arrives base64-encoded; hand the raw bytes on so the
+            # agent can attach them to the model conversation.
+            raw = getattr(content, "data", None)
+            mime = getattr(content, "mime_type", None) or getattr(content, "mimeType", None)
+            if raw and mime and str(mime).startswith("image/"):
+                try:
+                    images.append((base64.b64decode(raw), str(mime)))
+                except Exception as e:  # noqa: BLE001 - a bad image is not fatal
+                    logger.warning("MCP image decode failed for %s: %s", tool_name, e)
+        payload = "\n".join(chunks)
+        if not payload:
+            payload = (
+                f"({len(images)} image(s) returned; see the attached frame)"
+                if images
+                else "(no textual content returned)"
+            )
         # MCP SDKs have used both spellings; a tool that raised also comes back as
         # an "Error executing tool ..." payload, which the model must see as failed
         # so it can correct its arguments and retry.
@@ -183,7 +210,7 @@ class MCPToolRouter:
         looks_failed = payload.startswith("Error executing tool") or (
             "returned status code 4" in payload or "returned status code 5" in payload
         )
-        return payload, flagged or looks_failed
+        return MCPCallResult(text=payload, images=images, is_error=flagged or looks_failed)
 
 
 def _tool_schema(tool: Any) -> dict[str, Any]:

@@ -38,6 +38,7 @@ TOOL_TYPE_BY_PREFIX: dict[str, str] = {
     "list_loki_label_names": "grafana_mcp",
     "search_incident_history": "bigquery",
     "inspect_mcap_recording": "mcap_inspector",
+    "render_spatial_evidence": "mcap_inspector",
     "archive_evidence_to_gcs": "gcs",
     "foxglove_upload_recording": "foxglove",
     "foxglove_list_recordings": "foxglove",
@@ -60,10 +61,13 @@ Investigate on your own initiative:
 than assuming them; if a query comes back empty, say so instead of inventing values.
 2. Measure the physical evidence in the MCAP recording before claiming a spatial \
 root cause. Quote the numbers the tool returns.
-3. Check whether this has happened before and what fixed it.
-4. Actively rule out the plausible alternatives (network congestion, GPU thermal \
+3. Render that telemetry and *look at the frame*. Say what the path actually looks \
+like — where it stops being smooth, and what it is avoiding when it does. Do not \
+describe an image you were not shown.
+4. Check whether this has happened before and what fixed it.
+5. Actively rule out the plausible alternatives (network congestion, GPU thermal \
 throttling) against telemetry, and mark them rejected with the conflicting evidence.
-5. Preserve the evidence: archive the recording and publish it to Foxglove so a rig \
+6. Preserve the evidence: archive the recording and publish it to Foxglove so a rig \
 operator can scrub the real bag, and annotate the incident on the Foxglove timeline.
 
 Then stop calling tools and return the final structured investigation. Ground every \
@@ -221,9 +225,15 @@ class MCPGeminiAgent:
                 for call in calls:
                     args = dict(call.args or {})
                     call_started = time.monotonic()
-                    payload, is_error = await router.call(call.name, args)
+                    result = await router.call(call.name, args)
+                    payload, is_error = result.text, result.is_error
                     call_ms = int((time.monotonic() - call_started) * 1000)
                     server = router.server_of(call.name) or "unknown"
+                    if result.images:
+                        payload = (
+                            f"{payload}\n[{len(result.images)} rendered frame(s) attached "
+                            "below — look at them before concluding]"
+                        )
 
                     self._record(
                         step_name=call.name,
@@ -244,6 +254,11 @@ class MCPGeminiAgent:
                             )
                         )
                     )
+                    # A rendered frame cannot ride inside a function response, so it
+                    # is attached to the same turn as an inline image part. This is
+                    # what lets the model actually look at the telemetry.
+                    for blob, mime in result.images:
+                        response_parts.append(types.Part.from_bytes(data=blob, mime_type=mime))
                 contents.append(types.Content(role="user", parts=response_parts))
 
             logger.warning("Agent hit MAX_TOOL_ROUNDS without concluding")

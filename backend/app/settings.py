@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     # App & Environment
     PROJECT_NAME: str = "CineOps Guardian"
-    VERSION: str = "2.0.0"
+    VERSION: str = "2.1.0"
     ENVIRONMENT: Literal["development", "production", "test"] = "development"
     DEMO_MODE: Literal["mock", "real"] = "mock"
     HOST: str = "0.0.0.0"

@@ -17,6 +17,49 @@ class MCAPInspector:
         if not os.path.exists(self.mcap_path):
             generate_synthetic_mcap(self.mcap_path)
 
+    def read_channels(self) -> dict[str, Any]:
+        """Reads the MCAP once and returns the raw per-topic sample series.
+
+        The rendering path needs the actual coordinates, not just the summary
+        statistics, so both callers share this single pass over the file.
+        """
+        if not os.path.exists(self.mcap_path):
+            generate_synthetic_mcap(self.mcap_path)
+
+        total_messages = 0
+        topics_seen: set[str] = set()
+        tf_samples: list[dict[str, Any]] = []
+        odom_samples: list[dict[str, Any]] = []
+        costmap_samples: list[dict[str, Any]] = []
+        camera_samples: list[dict[str, Any]] = []
+
+        with open(self.mcap_path, "rb") as f:
+            reader = make_reader(f)
+            for _schema, channel, message in reader.iter_messages():
+                total_messages += 1
+                topics_seen.add(channel.topic)
+                try:
+                    payload = json.loads(message.data.decode("utf-8"))
+                except Exception:
+                    continue
+                if channel.topic == "/tf":
+                    tf_samples.append(payload)
+                elif channel.topic == "/dolly/odom":
+                    odom_samples.append(payload)
+                elif channel.topic == "/costmap/obstacles":
+                    costmap_samples.append(payload)
+                elif channel.topic == "/camera/status":
+                    camera_samples.append(payload)
+
+        return {
+            "total_messages": total_messages,
+            "topics": sorted(topics_seen),
+            "tf": tf_samples,
+            "odom": odom_samples,
+            "costmap": costmap_samples,
+            "camera": camera_samples,
+        }
+
     def extract_evidence_summary(self) -> dict[str, Any]:
         """Reads MCAP and returns structured metrics for Gemini and the human operator."""
         if not os.path.exists(self.mcap_path):
