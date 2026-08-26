@@ -19,7 +19,7 @@ class ApprovalRequest(BaseModel):
 
 @router.get("/current", response_model=Incident)
 async def get_current_incident():
-    return incident_service.get_current_incident()
+    return await incident_service.get_current_incident()
 
 
 @router.post("/investigate", response_model=Incident)
@@ -50,7 +50,7 @@ async def approve_recovery(req: ApprovalRequest):
 
 @router.post("/reset", response_model=Incident)
 async def reset_incident():
-    return incident_service.reset_incident()
+    return await incident_service.reset_incident()
 
 
 @router.get("/{incident_id}/recording.mcap")

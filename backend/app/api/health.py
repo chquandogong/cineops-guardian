@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from backend.app.services.incident_service import incident_service
 from backend.app.settings import settings
 
 router = APIRouter(tags=["Health"])
@@ -12,6 +13,7 @@ async def health_check():
         "app": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "mode": settings.DEMO_MODE,
+        "state_backend": incident_service.state_backend,
         "model": settings.GEMINI_MODEL,
     }
 
@@ -26,4 +28,5 @@ async def api_status():
         "model": settings.GEMINI_MODEL,
         "thinking_level": settings.GEMINI_THINKING_LEVEL,
         "mode": settings.DEMO_MODE,
+        "state_backend": incident_service.state_backend,
     }

@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     # TF drift when the baseline shows the same value, the tool is decorative.
     BASELINE_TF_Z: float = 0.350
 
+    # Where the incident under investigation is stored. "memory" is process-local
+    # and only correct while the service runs as a single instance; "firestore"
+    # shares it, so the console sees the same incident whichever instance answers.
+    INCIDENT_STORE: Literal["memory", "firestore"] = "memory"
+    FIRESTORE_COLLECTION: str = "cineops_incidents"
+    FIRESTORE_DATABASE: str = ""
+
     # Stage Metadata
     DEFAULT_STAGE_ID: str = "stage-a-virtual-prod"
     DEFAULT_ROBOT_ID: str = "dolly-alpha-01"
