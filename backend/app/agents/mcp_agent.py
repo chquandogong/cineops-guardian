@@ -103,6 +103,9 @@ class MCPGeminiAgent:
         self.incident = incident
         self.traces: list[ToolTraceEntry] = []
         self.verdict: AgentInvestigationOutput | None = None
+        # Metrics the baseline take showed to be normal for this rig. Cited by the
+        # guardrail below, which does not trust the model to honour them.
+        self.baseline_identical: list[str] = []
         self._step = 0
 
     def _next_step(self) -> int:
@@ -234,6 +237,14 @@ class MCPGeminiAgent:
                     payload, is_error = result.text, result.is_error
                     call_ms = int((time.monotonic() - call_started) * 1000)
                     server = router.server_of(call.name) or "unknown"
+                    if call.name == "compare_with_baseline":
+                        try:
+                            parsed_cmp = json.loads(result.text.split("\n[")[0])
+                            self.baseline_identical = list(
+                                parsed_cmp.get("identical_metrics") or []
+                            )
+                        except Exception:  # noqa: BLE001 - guardrail is best-effort
+                            self.baseline_identical = []
                     if result.images:
                         payload = (
                             f"{payload}\n[{len(result.images)} rendered frame(s) attached "
@@ -330,6 +341,7 @@ class MCPGeminiAgent:
             )
             return None
 
+        self._flag_baseline_contradiction(parsed)
         self._record(
             step_name="emit_structured_diagnosis",
             tool_type="gemini_reasoner",
@@ -345,6 +357,67 @@ class MCPGeminiAgent:
             duration_ms=int((time.monotonic() - started) * 1000),
         )
         return parsed
+
+    # Metric names as they appear in the baseline payload, mapped to the words a
+    # hypothesis uses when it blames them.
+    _METRIC_WORDS: dict[str, tuple[str, ...]] = {
+        "tf_z_translation_m": ("tf", "translation", "extrinsic", "calibration"),
+        "tf_checksum": ("checksum", "crc"),
+        "recovery_loop_samples": ("recovery loop", "oscillation"),
+        "min_fps": ("fps", "frame rate", "genlock"),
+    }
+
+    def _flag_baseline_contradiction(self, verdict: AgentInvestigationOutput) -> None:
+        """Catches a root cause the baseline already showed to be normal.
+
+        The model is told that a metric identical to a clean take cannot be the
+        cause, and in testing it will still blame that metric anyway. Prompting is
+        not a control, so this checks the verdict against what the baseline
+        actually returned and says so in the trace the operator reads.
+        """
+        if not self.baseline_identical:
+            return
+        blamed = " ".join(
+            [verdict.primary_hypothesis.title, verdict.primary_hypothesis.rationale]
+        ).lower()
+        contradicted = [
+            metric
+            for metric in self.baseline_identical
+            if any(word in blamed for word in self._METRIC_WORDS.get(metric, ()))
+        ]
+        if not contradicted:
+            return
+        self._record(
+            step_name="baseline_contradiction",
+            tool_type="system",
+            action_summary=(
+                "Guardrail: the stated root cause rests on metrics the baseline take "
+                "shows to be normal for this rig"
+            ),
+            tool_name="baseline_consistency_check",
+            tool_input={
+                "primary_hypothesis": verdict.primary_hypothesis.title,
+                "identical_to_baseline": self.baseline_identical,
+            },
+            output_summary=(
+                "UNSUPPORTED: "
+                + ", ".join(contradicted)
+                + " are identical in a take that finished clean, so they cannot "
+                "explain this failure. Treat the stated confidence as unverified."
+            ),
+            duration_ms=0,
+            status="error",
+        )
+        verdict.primary_hypothesis.status = "investigating"
+        verdict.primary_hypothesis.confidence = min(verdict.primary_hypothesis.confidence, 0.30)
+        verdict.primary_hypothesis.missing_evidence = [
+            *verdict.primary_hypothesis.missing_evidence,
+            (
+                "Baseline comparison contradicts this hypothesis: "
+                + ", ".join(contradicted)
+                + " match a clean take on the same rig."
+            ),
+        ]
 
 
 __all__ = ["MCPGeminiAgent", "MCPUnavailableError"]

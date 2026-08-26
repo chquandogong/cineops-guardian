@@ -139,15 +139,34 @@ def compare_with_baseline() -> list:
         for k, v in base_stats.items()
         if inc_stats.get(k) != v
     }
-    payload = {
+    payload: dict[str, Any] = {
         "baseline_take": "nominal reference run, same rig and route",
         "identical_metrics": identical,
         "differing_metrics": differing,
-        "note": (
-            "Metrics listed under identical_metrics are normal for this rig and "
-            "cannot explain the failure."
-        ),
     }
+    if differing:
+        payload["note"] = (
+            "Only the metrics under differing_metrics can explain the failure. "
+            "Anything under identical_metrics is normal for this rig — do not cite "
+            "it as a root cause."
+        )
+    else:
+        # The interesting case. A model that has already formed a hypothesis will
+        # happily ignore a passive note, so state the contradiction as a finding.
+        payload["contradiction"] = (
+            "NOTHING DIFFERS. Every metric you might blame — including the TF "
+            "Z-translation and its checksum — is identical in a take that finished "
+            "clean on this same rig. Whatever you were about to call the root cause "
+            "is this rig's normal operating state and did NOT cause this failure. "
+            "You must either identify a metric that actually differs, or report that "
+            "the cause is not present in the telemetry you have and list what is "
+            "missing. Do not restate the hypothesis you held before calling this tool."
+        )
+        payload["required_action"] = (
+            "Set the primary hypothesis status to 'investigating', put the "
+            "unexplained gap in missing_evidence, and do not claim a confident root "
+            "cause from metrics this baseline shows to be normal."
+        )
     return [
         json.dumps(payload, indent=1),
         Image(data=render_comparison(incident, baseline), format="png"),
