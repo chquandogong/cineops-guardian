@@ -1,8 +1,16 @@
 import json
+import math
 import os
 import time
 
 from mcap.writer import Writer
+
+from backend.app.integrations.mcap.foxglove_schemas import (
+    SCHEMAS,
+    point_cloud,
+    quat_from_yaw,
+    stamp,
+)
 
 
 def generate_synthetic_mcap(
@@ -60,6 +68,37 @@ def generate_synthetic_mcap(
         ch_camera = writer.register_channel(
             schema_id=schema_id,
             topic="/camera/status",
+            message_encoding="json",
+        )
+
+        # Visualization topics carrying the well-known Foxglove schemas. The
+        # analytic topics above stay as they are for the inspector; these are what
+        # make the recording actually render in a 3D panel, the way a real robot
+        # bag does.
+        fg_ids = {
+            name: writer.register_schema(
+                name=name, encoding="jsonschema", data=json.dumps(schema).encode("utf-8")
+            )
+            for name, schema in SCHEMAS.items()
+        }
+        ch_viz_tf = writer.register_channel(
+            schema_id=fg_ids["foxglove.FrameTransform"],
+            topic="/viz/tf",
+            message_encoding="json",
+        )
+        ch_viz_pose = writer.register_channel(
+            schema_id=fg_ids["foxglove.PoseInFrame"],
+            topic="/viz/dolly_pose",
+            message_encoding="json",
+        )
+        ch_viz_cloud = writer.register_channel(
+            schema_id=fg_ids["foxglove.PointCloud"],
+            topic="/viz/lidar_points",
+            message_encoding="json",
+        )
+        ch_viz_scene = writer.register_channel(
+            schema_id=fg_ids["foxglove.SceneUpdate"],
+            topic="/viz/costmap",
             message_encoding="json",
         )
 
@@ -143,6 +182,119 @@ def generate_synthetic_mcap(
                 channel_id=ch_camera,
                 log_time=t_ns,
                 data=json.dumps(cam_data).encode("utf-8"),
+                publish_time=t_ns,
+            )
+
+            # ---- visualization: TF tree, dolly pose, LiDAR, costmap geometry
+            yaw = math.radians(odom_data["pose"]["orientation"]["yaw_deg"])
+            for parent, child, tr, rot in (
+                ("world", "base_link", {"x": px, "y": py, "z": 0.0}, quat_from_yaw(yaw)),
+                (
+                    "base_link",
+                    "lidar_link",
+                    {"x": 0.0, "y": 0.0, "z": 0.60},
+                    {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                ),
+                (
+                    "lidar_link",
+                    "camera_optical_frame",
+                    {"x": 0.120, "y": 0.0, "z": tf_data["transform"]["translation"]["z"]},
+                    {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                ),
+            ):
+                writer.add_message(
+                    channel_id=ch_viz_tf,
+                    log_time=t_ns,
+                    data=json.dumps(
+                        {
+                            "timestamp": stamp(t_ns),
+                            "parent_frame_id": parent,
+                            "child_frame_id": child,
+                            "translation": tr,
+                            "rotation": rot,
+                        }
+                    ).encode("utf-8"),
+                    publish_time=t_ns,
+                )
+
+            writer.add_message(
+                channel_id=ch_viz_pose,
+                log_time=t_ns,
+                data=json.dumps(
+                    {
+                        "timestamp": stamp(t_ns),
+                        "frame_id": "world",
+                        "pose": {
+                            "position": {"x": px, "y": py, "z": 0.0},
+                            "orientation": quat_from_yaw(yaw),
+                        },
+                    }
+                ).encode("utf-8"),
+                publish_time=t_ns,
+            )
+
+            # A LiDAR sweep of the set floor and the lighting scaffold. Once the
+            # calibration is stale the returns are projected with the wrong Z, which
+            # is what the costmap then inflates into a phantom obstacle.
+            z_error = tf_data["transform"]["translation"]["z"] - 0.350
+            sweep = []
+            for k in range(72):
+                a = (k / 72) * 2 * math.pi
+                r = 3.4 + 0.35 * math.sin(a * 3)
+                sweep.append((r * math.cos(a), r * math.sin(a), -0.60 + z_error))
+            for k in range(24):  # the lighting scaffold the dolly passes
+                sweep.append((2.6, -0.4 + k * 0.05, -0.55 + z_error + k * 0.02))
+            writer.add_message(
+                channel_id=ch_viz_cloud,
+                log_time=t_ns,
+                data=point_cloud(t_ns, "lidar_link", sweep),
+                publish_time=t_ns,
+            )
+
+            entities = []
+            if is_drifted:
+                entities.append(
+                    {
+                        "timestamp": stamp(t_ns),
+                        "frame_id": "world",
+                        "id": "phantom_obstacle",
+                        "lifetime": {"sec": 0, "nsec": 400_000_000},
+                        "frame_locked": False,
+                        "cylinders": [
+                            {
+                                "pose": {
+                                    "position": {"x": px + 0.9, "y": 2.0, "z": 0.35},
+                                    "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                                },
+                                "size": {
+                                    "x": costmap_data["inflation_radius_m"] * 2,
+                                    "y": costmap_data["inflation_radius_m"] * 2,
+                                    "z": 0.7,
+                                },
+                                "bottom_scale": 1.0,
+                                "top_scale": 1.0,
+                                "color": {"r": 0.97, "g": 0.44, "b": 0.44, "a": 0.55},
+                            }
+                        ],
+                        "texts": [
+                            {
+                                "pose": {
+                                    "position": {"x": px + 0.9, "y": 2.0, "z": 1.0},
+                                    "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
+                                },
+                                "billboard": True,
+                                "font_size": 0.22,
+                                "scale_invariant": False,
+                                "color": {"r": 1.0, "g": 0.6, "b": 0.6, "a": 1.0},
+                                "text": "phantom obstacle (stale TF)",
+                            }
+                        ],
+                    }
+                )
+            writer.add_message(
+                channel_id=ch_viz_scene,
+                log_time=t_ns,
+                data=json.dumps({"deletions": [], "entities": entities}).encode("utf-8"),
                 publish_time=t_ns,
             )
 
