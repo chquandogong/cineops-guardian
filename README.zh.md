@@ -348,6 +348,42 @@ for blob, mime in result.images:
 
 ---
 
+## 故障不再存放在进程里
+
+正在排查的故障过去是模块级服务对象上的一个字段，因此服务只能钉在
+`--max-instances 1`。这不是扩容细节：控制台在 SSE 流修改同一个故障时轮询
+`/api/v1/incidents/current`，而没有任何机制保证这两个请求落到同一个实例。钉成单实例
+时这个缺陷看不见；一旦放开，它就表现为控制台闪回空白追踪。
+
+状态现在位于 `IncidentStore` 之后，有两个后端：本地运行与 mock 模式用 `memory`，
+部署服务用 `firestore`——每个故障 id 一个文档，每流出一步就写入一次。Firestore
+不可达时会退回 memory 并留下告警，而不是让启动失败；`/health` 会报告实际生效的后端：
+
+```json
+{ "state_backend": "firestore", "instance": "4ec7015b5fd3", ... }
+```
+
+### 证明状态确实是共享的
+
+如果并发读者是由同一个实例应答的，那么它们与写入方一致就什么也证明不了——这项测试
+的第一次运行里，73 次读取全部落在写入方自己的实例上，因为 Cloud Run 会毫不费力地把
+80 个并发请求塞进一个容器。因此校验把容器并发度钉为 1。这样 SSE 流在整个运行期间占
+住一个实例，每个读者都*必然*在别处，而每个响应都用 `X-Instance-Id` 标明自己的实例。
+
+在部署的服务上测得，写入方为 `4ec7015b5fd3`：
+
+| 轮次 | 已流出步数 | 读者看到的追踪长度 | 读者实例 |
+|---|---|---|---|
+| 0 | 1 | 1 | `d2341ec2d7ad`、`e3aba124b4ce`、`ea2753a960e4` |
+| 1 | 6 | 6 | `d2341ec2d7ad`、`e3aba124b4ce`、`ea2753a960e4` |
+| 3 | 10 | 10 | `d2341ec2d7ad`、`e3aba124b4ce` |
+| 5 | 14 | 14 | `d2341ec2d7ad`、`e3aba124b4ce` |
+
+三个从未运行过智能体的实例逐步跟上了整个排查，完成后的 16 步追踪读回来也完全一致。
+服务现在以 `--max-instances 4` 运行。
+
+---
+
 ## 快速开始
 
 ### 离线运行（无需凭据）
@@ -405,17 +441,22 @@ go install github.com/grafana/mcp-grafana/cmd/mcp-grafana@v1.2.0
 ```bash
 gcloud run deploy cineops-guardian --source . \
   --region asia-northeast3 --allow-unauthenticated \
-  --memory 2Gi --cpu 2 --timeout 300 --min-instances 1 --max-instances 1 \
-  --set-env-vars DEMO_MODE=real,GOOGLE_GENAI_USE_VERTEXAI=True,... \
+  --memory 2Gi --cpu 2 --timeout 300 --min-instances 1 --max-instances 4 \
+  --set-env-vars DEMO_MODE=real,GOOGLE_GENAI_USE_VERTEXAI=True,INCIDENT_STORE=firestore,... \
   --set-secrets GRAFANA_SERVICE_ACCOUNT_TOKEN=grafana-sa-token:latest,FOXGLOVE_API_KEY=foxglove-api-key:latest
 ```
 
 容器的运行时服务账号需要 `roles/aiplatform.user`、`roles/bigquery.jobUser`、
-`roles/bigquery.dataEditor` 和 `roles/storage.objectAdmin`。由于正在排查的故障是
-进程内状态，实例数固定为 1。
+`roles/bigquery.dataEditor`、`roles/storage.objectAdmin` 和
+`roles/datastore.user`。首次部署前先创建一次 Firestore 数据库：
 
-> **关于 `max-instances 1`：** 当前故障存放在模块级服务对象里，两个实例会各说各话。
-> 在服务多于一个摄影棚之前，把该状态迁到 Firestore 或 Redis 是显而易见的下一步。
+```bash
+gcloud services enable firestore.googleapis.com
+gcloud firestore databases create --location=asia-northeast3
+```
+
+`INCIDENT_STORE=memory`（默认值）会完全跳过 Firestore，把故障留在进程内——本地开发
+就该这样，但那时服务必须以单实例运行。
 
 ### 测试
 
@@ -441,6 +482,9 @@ make lint    # ruff check + format --check
 | `FOXGLOVE_API_KEY` / `FOXGLOVE_ORG_SLUG`        | —                            | Foxglove Data Platform                  |
 | `BIGQUERY_DATASET`                              | `cineops_guardian`           | 故障历史数据集                          |
 | `GCS_BUCKET`                                    | `cineops-guardian-evidence`  | 证据归档                                |
+| `INCIDENT_STORE`                                | `memory`                     | 设为 `firestore` 则跨实例共享状态       |
+| `FIRESTORE_COLLECTION`                          | `incidents`                  | 存放故障文档的集合                      |
+| `BASELINE_TF_Z`                                 | `0.350`                      | 参考设备的 TF Z，即消融旋钮             |
 
 ---
 
@@ -457,6 +501,8 @@ backend/
     mcp/router.py         MCP 客户端：会话、工具目录、schema 转换
     integrations/         Grafana、Foxglove、BigQuery、GCS、MCAP 客户端
     services/             故障生命周期、恢复执行
+      incident_store.py   共享故障的 memory / Firestore 后端
+    instance.py           标明应答的实例 (X-Instance-Id)
     domain/               Pydantic 模型、合成 fixture
     api/                  FastAPI 路由，含 SSE 追踪流
   mcp_servers/
@@ -478,7 +524,9 @@ docs/                     架构、运行手册、Grafana 集成说明
 - **Prometheus 返回空结果。** 演示实例只灌入了日志、没有指标，所以
   `query_prometheus` 合理地返回空，而智能体会照实说明，不会编造数值。灌入指标需要
   remote-write 推送，目前尚未接通。
-- **进程内状态。** 见上文 `max-instances 1` 的说明。
+- **一个 Firestore 文档就是全部存储。** 每个故障一个文档，最后写入者胜出。一次只
+  排查一起故障时没问题，但同一个故障 id 上有两个智能体就会互相覆盖——那需要事务，
+  而不是 `set`。
 - **智能体看不到 Foxglove 查看器本身。** 查看器需要已登录的浏览器会话，而 API key
   并不能认证这个 Web 应用，因此在服务端截屏就意味着要把会话 cookie 存进已部署的
   服务里。查看器所贡献的信息——3D 几何与因果顺序——改由渲染帧传递；人则通过布局

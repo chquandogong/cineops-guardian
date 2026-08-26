@@ -31,7 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
                 CineOps <span className="text-cyan-400">Guardian</span>
               </h1>
               <span className="rounded bg-cyan-950/80 px-2 py-0.5 text-[11px] font-mono text-cyan-300 border border-cyan-800/60">
-                v2.2.0
+                v2.3.0
               </span>
               <span className="rounded bg-slate-800/80 px-2 py-0.5 text-[11px] font-mono text-slate-300 border border-slate-700">
                 Grafana Labs Track

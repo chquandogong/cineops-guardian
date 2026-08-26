@@ -375,6 +375,46 @@ ablation에서는 모델이 스스로 판단을 바꾸고 이유를 밝혔습니
 
 ---
 
+## 사고는 프로세스 안에 살지 않습니다
+
+조사 중인 사고는 모듈 수준 서비스 객체의 필드였고, 그래서 서비스를
+`--max-instances 1`에 묶어야 했습니다. 이건 스케일링 문제가 아닙니다. 콘솔은 SSE
+스트림이 같은 사고를 바꾸는 동안 `/api/v1/incidents/current`를 폴링하는데, 그 두
+요청이 같은 인스턴스에 도달한다는 보장이 없습니다. 인스턴스를 하나로 고정하면 이
+버그는 보이지 않고, 고정을 풀면 콘솔이 빈 트레이스로 깜빡이는 형태로 드러납니다.
+
+이제 상태는 `IncidentStore` 뒤에 있고 백엔드가 둘입니다. 로컬 실행과 mock 모드용
+`memory`, 배포 서비스용 `firestore` — 사고 id 당 문서 하나로, 스트리밍된 스텝마다
+기록합니다. Firestore에 닿지 못하면 시작에 실패하는 대신 경고를 남기고 memory로
+내려가며, `/health`가 실제로 채택된 백엔드를 보고합니다.
+
+```json
+{ "state_backend": "firestore", "instance": "4ec7015b5fd3", ... }
+```
+
+### 상태가 정말 공유되는지 증명하기
+
+동시 리더가 writer와 같은 값을 본다는 것은, 그 리더들이 같은 인스턴스에서 응답을
+받았다면 아무것도 증명하지 못합니다. 실제로 이 테스트의 첫 실행에서는 읽기 73건이
+전부 writer 자신의 인스턴스에 떨어졌습니다. Cloud Run은 컨테이너 하나에 동시 요청
+80건을 아무렇지 않게 담기 때문입니다. 그래서 검증은 컨테이너 concurrency를 1로
+고정합니다. 그러면 SSE 스트림이 실행 내내 인스턴스 하나를 점유하므로 모든 리더는
+*필연적으로* 다른 곳에 있고, 각 응답은 `X-Instance-Id`로 자기 인스턴스를 밝힙니다.
+
+배포된 서비스에서 측정한 결과 (writer: `4ec7015b5fd3`):
+
+| 라운드 | 스트리밍된 스텝 | 리더가 본 트레이스 길이 | 리더 인스턴스 |
+|---|---|---|---|
+| 0 | 1 | 1 | `d2341ec2d7ad`, `e3aba124b4ce`, `ea2753a960e4` |
+| 1 | 6 | 6 | `d2341ec2d7ad`, `e3aba124b4ce`, `ea2753a960e4` |
+| 3 | 10 | 10 | `d2341ec2d7ad`, `e3aba124b4ce` |
+| 5 | 14 | 14 | `d2341ec2d7ad`, `e3aba124b4ce` |
+
+에이전트를 한 번도 실행하지 않은 인스턴스 3개가 조사를 스텝 단위로 따라왔고, 완료된
+16스텝 트레이스도 동일하게 읽혔습니다. 서비스는 이제 `--max-instances 4`로 돕니다.
+
+---
+
 ## 빠른 시작
 
 ### 오프라인 실행 (자격증명 불필요)
@@ -433,19 +473,24 @@ go install github.com/grafana/mcp-grafana/cmd/mcp-grafana@v1.2.0
 ```bash
 gcloud run deploy cineops-guardian --source . \
   --region asia-northeast3 --allow-unauthenticated \
-  --memory 2Gi --cpu 2 --timeout 300 --min-instances 1 --max-instances 1 \
-  --set-env-vars DEMO_MODE=real,GOOGLE_GENAI_USE_VERTEXAI=True,... \
+  --memory 2Gi --cpu 2 --timeout 300 --min-instances 1 --max-instances 4 \
+  --set-env-vars DEMO_MODE=real,GOOGLE_GENAI_USE_VERTEXAI=True,INCIDENT_STORE=firestore,... \
   --set-secrets GRAFANA_SERVICE_ACCOUNT_TOKEN=grafana-sa-token:latest,FOXGLOVE_API_KEY=foxglove-api-key:latest
 ```
 
 컨테이너의 런타임 서비스 계정에는 `roles/aiplatform.user`,
 `roles/bigquery.jobUser`, `roles/bigquery.dataEditor`,
-`roles/storage.objectAdmin`이 필요합니다. 조사 중인 사고가 인프로세스 상태이므로
-인스턴스는 1개로 고정합니다.
+`roles/storage.objectAdmin`, `roles/datastore.user`가 필요합니다. 첫 배포 전에
+Firestore 데이터베이스를 한 번 만들어 둡니다.
 
-> **`max-instances 1`에 대한 참고:** 현재 사고는 모듈 수준 서비스 객체에 살아
-> 있어서, 인스턴스가 둘이면 서로 다른 상태를 봅니다. 스테이지를 하나 이상
-> 서비스하기 전에 그 상태를 Firestore나 Redis로 옮기는 것이 명백한 다음 단계입니다.
+```bash
+gcloud services enable firestore.googleapis.com
+gcloud firestore databases create --location=asia-northeast3
+```
+
+`INCIDENT_STORE=memory`(기본값)는 Firestore를 아예 건너뛰고 사고를 프로세스 안에
+두므로 로컬 개발에는 이게 맞습니다 — 다만 그때는 서비스가 단일 인스턴스로 돌아야
+합니다.
 
 ### 테스트
 
@@ -471,6 +516,9 @@ make lint    # ruff check + format --check
 | `FOXGLOVE_API_KEY` / `FOXGLOVE_ORG_SLUG`        | —                            | Foxglove Data Platform                      |
 | `BIGQUERY_DATASET`                              | `cineops_guardian`           | 사고 이력 데이터셋                          |
 | `GCS_BUCKET`                                    | `cineops-guardian-evidence`  | 증거 아카이브                               |
+| `INCIDENT_STORE`                                | `memory`                     | `firestore`면 인스턴스 간 상태 공유         |
+| `FIRESTORE_COLLECTION`                          | `incidents`                  | 사고 문서가 놓이는 컬렉션                   |
+| `BASELINE_TF_Z`                                 | `0.350`                      | 기준 리그의 TF Z. ablation 손잡이           |
 
 ---
 
@@ -487,6 +535,8 @@ backend/
     mcp/router.py         MCP 클라이언트: 세션, 도구 카탈로그, 스키마 변환
     integrations/         Grafana, Foxglove, BigQuery, GCS, MCAP 클라이언트
     services/             사고 수명주기, 복구 실행
+      incident_store.py   공유 사고를 위한 memory / Firestore 백엔드
+    instance.py           응답한 인스턴스를 밝힘 (X-Instance-Id)
     domain/               Pydantic 모델, 합성 픽스처
     api/                  SSE 트레이스 스트림을 포함한 FastAPI 라우트
   mcp_servers/
@@ -509,7 +559,9 @@ docs/                     아키텍처, 런북, Grafana 통합 노트
   메트릭이 없어서 `query_prometheus`가 정당하게 비어서 돌아오고, 에이전트는 값을
   지어내지 않고 그렇게 말합니다. 메트릭 시딩에는 아직 연결하지 않은 remote-write
   푸시가 필요합니다.
-- **인프로세스 상태.** 위의 `max-instances 1` 참고를 보세요.
+- **Firestore 문서 하나가 저장소 전부입니다.** 사고 당 문서 하나, 마지막 쓰기가
+  이깁니다. 한 번에 조사 하나면 괜찮지만, 같은 사고 id에 에이전트가 둘이면 서로를
+  덮어씁니다. 그건 `set` 대신 트랜잭션이 필요한 문제입니다.
 - **에이전트가 Foxglove 뷰어 화면 자체를 보지는 못합니다.** 뷰어는 로그인 세션이
   필요하고 API 키로는 웹앱 인증이 안 되므로, 서버에서 화면을 캡처하려면 배포된
   서비스에 세션 쿠키를 저장해야 합니다. 뷰어가 준 정보 — 3D 기하와 인과 순서 —

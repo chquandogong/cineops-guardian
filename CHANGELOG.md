@@ -1,5 +1,43 @@
 # Changelog
 
+## v2.3.0 — the incident leaves the process
+
+### Changed
+
+- **`IncidentStore` replaces module-level state.** The incident under
+  investigation used to be a field on a singleton service object, so the service
+  had to run pinned to `--max-instances 1`. Two backends now sit behind one
+  interface: `memory` for local runs and mock mode, `firestore` for the deployed
+  service — one document per incident id, written after every streamed step.
+  Firestore being unreachable degrades to memory with a warning rather than
+  failing startup, and `/health` reports which backend won.
+- The service runs `--max-instances 4`.
+
+### Added
+
+- **`X-Instance-Id` on every response**, resolved once per process from the Cloud
+  Run metadata server and degrading to a process id off Cloud Run. Shared state is
+  a claim until you can tell the instances apart.
+
+### Verified
+
+The first version of this test proved nothing: all 73 concurrent reads landed on
+the writer's own instance, because Cloud Run fits 80 concurrent requests in one
+container. Pinning container concurrency to 1 makes the SSE stream occupy one
+instance for its whole run, so every reader is necessarily elsewhere. Measured on
+the deployed service, writer on `4ec7015b5fd3`:
+
+| round | steps streamed | trace length seen by readers | reader instances |
+|---|---|---|---|
+| 0 | 1 | 1 | `d2341ec2d7ad`, `e3aba124b4ce`, `ea2753a960e4` |
+| 1 | 6 | 6 | `d2341ec2d7ad`, `e3aba124b4ce`, `ea2753a960e4` |
+| 3 | 10 | 10 | `d2341ec2d7ad`, `e3aba124b4ce` |
+| 5 | 14 | 14 | `d2341ec2d7ad`, `e3aba124b4ce` |
+
+Three instances that never ran the agent tracked the investigation step for step,
+and the finished 16-step trace read back identically.
+
+
 ## v2.2.0 — a baseline that binds, and a recording that renders
 
 ### Added

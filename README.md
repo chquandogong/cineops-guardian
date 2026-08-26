@@ -385,6 +385,49 @@ file listing.
 
 ---
 
+## The incident does not live in the process
+
+The incident under investigation used to be a field on a module-level service
+object, which forced the service to `--max-instances 1`. That is not a scaling
+detail: the console polls `/api/v1/incidents/current` while an SSE stream is
+mutating the same incident, and nothing guarantees those two requests reach the
+same instance. Pinned to one instance the bug is invisible; unpinned it shows up
+as a console that flickers back to an empty trace.
+
+State now sits behind an `IncidentStore` with two backends — `memory` for local
+runs and mock mode, `firestore` for the deployed service, one document per
+incident id, written after every streamed step. Firestore being unreachable
+degrades to memory with a warning rather than failing startup, and `/health`
+reports which backend actually won:
+
+```json
+{ "state_backend": "firestore", "instance": "4ec7015b5fd3", ... }
+```
+
+### Proving the state is really shared
+
+Concurrent readers agreeing with the writer proves nothing if they were served by
+the same instance — the first run of this test had all 73 reads land on the
+writer's own instance, because Cloud Run happily fits 80 concurrent requests in
+one container. So the check pins container concurrency to 1. The SSE stream then
+occupies one instance for its entire run and every reader is *necessarily*
+somewhere else, and each response names its instance in `X-Instance-Id`.
+
+Measured against the deployed service, writer on `4ec7015b5fd3`:
+
+| round | steps streamed | trace length seen by readers | reader instances |
+|---|---|---|---|
+| 0 | 1 | 1 | `d2341ec2d7ad`, `e3aba124b4ce`, `ea2753a960e4` |
+| 1 | 6 | 6 | `d2341ec2d7ad`, `e3aba124b4ce`, `ea2753a960e4` |
+| 3 | 10 | 10 | `d2341ec2d7ad`, `e3aba124b4ce` |
+| 5 | 14 | 14 | `d2341ec2d7ad`, `e3aba124b4ce` |
+
+Three instances that never ran the agent tracked the investigation step for step,
+and the finished 16-step trace read back identically. The service now runs
+`--max-instances 4`.
+
+---
+
 ## Quickstart
 
 ### Run it offline (no credentials)
@@ -444,20 +487,24 @@ go install github.com/grafana/mcp-grafana/cmd/mcp-grafana@v1.2.0
 ```bash
 gcloud run deploy cineops-guardian --source . \
   --region asia-northeast3 --allow-unauthenticated \
-  --memory 2Gi --cpu 2 --timeout 300 --min-instances 1 --max-instances 1 \
-  --set-env-vars DEMO_MODE=real,GOOGLE_GENAI_USE_VERTEXAI=True,... \
+  --memory 2Gi --cpu 2 --timeout 300 --min-instances 1 --max-instances 4 \
+  --set-env-vars DEMO_MODE=real,GOOGLE_GENAI_USE_VERTEXAI=True,INCIDENT_STORE=firestore,... \
   --set-secrets GRAFANA_SERVICE_ACCOUNT_TOKEN=grafana-sa-token:latest,FOXGLOVE_API_KEY=foxglove-api-key:latest
 ```
 
 The container's runtime service account needs `roles/aiplatform.user`,
-`roles/bigquery.jobUser`, `roles/bigquery.dataEditor` and
-`roles/storage.objectAdmin`. Instances are pinned to one because the incident
-under investigation is in-process state.
+`roles/bigquery.jobUser`, `roles/bigquery.dataEditor`,
+`roles/storage.objectAdmin` and `roles/datastore.user`. Create the Firestore
+database once before the first deploy:
 
-> **Note on `max-instances 1`:** the current incident lives in a module-level
-> service object, so two instances would disagree about it. Moving that state to
-> Firestore or Redis is the obvious next step before this serves more than one
-> stage.
+```bash
+gcloud services enable firestore.googleapis.com
+gcloud firestore databases create --location=asia-northeast3
+```
+
+`INCIDENT_STORE=memory` (the default) skips Firestore entirely and keeps the
+incident in the process, which is correct for local development — but then the
+service must run as a single instance.
 
 ### Tests
 
@@ -483,6 +530,9 @@ make lint    # ruff check + format --check
 | `FOXGLOVE_API_KEY` / `FOXGLOVE_ORG_SLUG`        | —                            | Foxglove Data Platform                        |
 | `BIGQUERY_DATASET`                              | `cineops_guardian`           | Incident history dataset                      |
 | `GCS_BUCKET`                                    | `cineops-guardian-evidence`  | Evidence archive                              |
+| `INCIDENT_STORE`                                | `memory`                     | `firestore` shares state across instances     |
+| `FIRESTORE_COLLECTION`                          | `incidents`                  | Collection holding the incident document      |
+| `BASELINE_TF_Z`                                 | `0.350`                      | Reference rig's TF Z; the ablation knob       |
 
 ---
 
@@ -499,6 +549,8 @@ backend/
     mcp/router.py         MCP client: sessions, tool catalogue, schema conversion
     integrations/         Grafana, Foxglove, BigQuery, GCS, MCAP clients
     services/             incident lifecycle, recovery execution
+      incident_store.py   memory / Firestore backends for the shared incident
+    instance.py           names the serving instance (X-Instance-Id)
     domain/               Pydantic models, synthetic fixtures
     api/                  FastAPI routes incl. the SSE trace stream
   mcp_servers/
@@ -521,7 +573,10 @@ docs/                     architecture, runbook, Grafana integration notes
   metrics, so `query_prometheus` legitimately comes back empty and the agent says
   so rather than inventing values. Seeding metrics needs a remote-write push that
   is not wired up yet.
-- **In-process state.** See the `max-instances 1` note above.
+- **The Firestore document is the whole store.** One document per incident, last
+  write wins. Fine for one investigation at a time; two agents on the same
+  incident id would clobber each other, which needs a transaction rather than a
+  `set`.
 - **The agent cannot see the Foxglove viewer itself.** The viewer needs an
   authenticated browser session and an API key does not authenticate the web app,
   so capturing its screen server-side would mean storing a session cookie in a
