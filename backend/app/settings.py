@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Foxglove Data Platform
     FOXGLOVE_API_KEY: str = "fox_sk_placeholder"
     FOXGLOVE_ORG_SLUG: str = "your-org"
+    # Layout the operator link opens with. Without it Foxglove uses the default
+    # layout, whose panels have no topics enabled — the recording loads and shows
+    # nothing, which is what this project shipped before.
+    FOXGLOVE_LAYOUT_ID: str = ""
 
     # Model Context Protocol
     # Path to the official grafana/mcp-grafana binary, spawned over stdio. The

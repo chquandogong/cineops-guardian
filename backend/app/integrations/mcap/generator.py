@@ -258,7 +258,9 @@ def generate_synthetic_mcap(
                         "timestamp": stamp(t_ns),
                         "frame_id": "world",
                         "id": "phantom_obstacle",
-                        "lifetime": {"sec": 0, "nsec": 400_000_000},
+                        # Messages are 1 Hz, so a sub-second lifetime makes the entity blink
+                        # out between frames and the viewer shows nothing.
+                        "lifetime": {"sec": 2, "nsec": 0},
                         "frame_locked": False,
                         "cylinders": [
                             {
@@ -269,11 +271,11 @@ def generate_synthetic_mcap(
                                 "size": {
                                     "x": costmap_data["inflation_radius_m"] * 2,
                                     "y": costmap_data["inflation_radius_m"] * 2,
-                                    "z": 0.7,
+                                    "z": 1.2,
                                 },
                                 "bottom_scale": 1.0,
                                 "top_scale": 1.0,
-                                "color": {"r": 0.97, "g": 0.44, "b": 0.44, "a": 0.55},
+                                "color": {"r": 0.97, "g": 0.30, "b": 0.30, "a": 0.85},
                             }
                         ],
                         "texts": [

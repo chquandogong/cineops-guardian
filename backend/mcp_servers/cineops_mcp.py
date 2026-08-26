@@ -17,6 +17,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from mcp.server.mcpserver import Image, MCPServer
@@ -48,6 +49,24 @@ def _foxglove_headers() -> dict[str, str]:
         "Authorization": f"Bearer {settings.FOXGLOVE_API_KEY}",
         "Content-Type": "application/json",
     }
+
+
+def _operator_link(recording_id: str | None = None, at_iso: str | None = None) -> str:
+    """Deep link that opens the configured layout, at the flagged moment.
+
+    A bare recordings URL drops the operator into the default layout with no
+    topics enabled. Carrying the layout id and the timestamp is the difference
+    between "here is a file" and "here is the moment it went wrong".
+    """
+    base = f"https://app.foxglove.dev/{settings.FOXGLOVE_ORG_SLUG}"
+    if not recording_id:
+        return f"{base}/recordings"
+    url = f"{base}/view?ds=foxglove-stream&ds.recordingId={recording_id}"
+    if settings.FOXGLOVE_LAYOUT_ID:
+        url += f"&layoutId={settings.FOXGLOVE_LAYOUT_ID}"
+    if at_iso:
+        url += f"&time={quote(at_iso, safe='')}"
+    return url
 
 
 def _foxglove_ready() -> bool:
@@ -298,6 +317,10 @@ async def foxglove_upload_recording(
         "device_id": device_id,
         "device_name": device_name,
         "filename": filename,
+        "operator_link_hint": (
+            "Foxglove ingests asynchronously; call foxglove_list_recordings to get "
+            "the recording id, then hand the operator its operator_link."
+        ),
         "bytes": len(payload),
         "incident_id": incident_id,
         "recordings_url": f"https://app.foxglove.dev/{settings.FOXGLOVE_ORG_SLUG}/recordings",
@@ -331,6 +354,7 @@ async def foxglove_list_recordings(limit: int = 5) -> dict[str, Any]:
                 "bytes": r.get("size"),
                 "device": (r.get("device") or {}).get("name"),
                 "start": r.get("start"),
+                "operator_link": _operator_link(r.get("id"), r.get("start")),
             }
             for r in rows
         ],
@@ -378,6 +402,11 @@ async def foxglove_create_event(
         "event_id": created.get("id"),
         "device_id": device_id,
         "duration_seconds": duration_seconds,
+        "operator_link": _operator_link(at_iso=start_time),
+        "note": (
+            "Hand this link to the rig operator: it opens the incident-triage "
+            "layout at the annotated moment rather than a bare file listing."
+        ),
     }
 
 

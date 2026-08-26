@@ -26,7 +26,7 @@ AMBER = (251, 191, 36)
 RED = (248, 113, 113)
 GREEN = (52, 211, 153)
 
-W, H = 1280, 620
+W, H = 1280, 700
 PAD = 56
 
 
@@ -183,6 +183,60 @@ def render_spatial_evidence(channels: dict[str, Any]) -> bytes:
         step = (bx1 - bx0) / max(len(fps) - 1, 1)
         d.line([(bx0 + i * step, fy(v)) for i, v in enumerate(fps)], fill=AMBER, width=3)
         _text(d, (bx0, by1 + 10), f"min {min(fps):.2f} fps", fill=AMBER, font=F_LABEL)
+
+    # ---------------------------------------------------- causal ordering
+    # Side-by-side plots in Foxglove make one thing obvious that a min/max table
+    # hides: the transform steps *before* the frame rate falls. Ordering is what
+    # separates cause from symptom, so it gets stated explicitly.
+    tf_step = next(
+        (i for i, t in enumerate(tf) if abs(t["transform"]["translation"]["z"] - 0.350) > 1e-6),
+        None,
+    )
+    fps_drop = next((i for i, c in enumerate(camera) if c.get("fps", 24.0) < 24.0), None)
+    loop_start = next((i for i, o in enumerate(odom) if o.get("recovery_loop_active")), None)
+    marks = [
+        (tf_step, "TF Z diverges", RED),
+        (loop_start, "recovery loops begin", AMBER),
+        (fps_drop, "frame rate falls", AMBER),
+    ]
+    known = [(i, label, colour) for i, label, colour in marks if i is not None]
+    if known:
+        strip = (PAD, H - 122, W - PAD, H - 46)
+        d.rounded_rectangle(strip, radius=8, fill=PANEL, outline=GRID, width=1)
+        span = max(len(tf), len(camera), len(odom), 1)
+        x0, x1 = strip[0] + 24, strip[2] - 320
+        y_axis = strip[3] - 20
+        d.line([(x0, y_axis), (x1, y_axis)], fill=GRID, width=2)
+        _text(d, (strip[0] + 16, strip[1] + 10), "ORDER OF EVENTS", fill=MUTED, font=F_SMALL)
+        # marks land within a few seconds of each other, so stack the callouts
+        for row, (index, label, colour) in enumerate(sorted(known)):
+            x = x0 + index / max(span - 1, 1) * (x1 - x0)
+            d.line([(x, y_axis - 6), (x, y_axis + 6)], fill=colour, width=3)
+            ly = strip[1] + 30 + row * 17
+            d.line([(x, y_axis - 6), (x, ly + 8)], fill=GRID, width=1)
+            _text(d, (x + 7, ly), f"t={index}s  {label}", fill=colour, font=F_SMALL)
+        if tf_step is not None and fps_drop is not None and tf_step < fps_drop:
+            _text(
+                d,
+                (strip[2] - 300, strip[1] + 30),
+                "the transform diverges",
+                fill=INK,
+                font=F_LABEL,
+            )
+            _text(
+                d,
+                (strip[2] - 300, strip[1] + 50),
+                f"{fps_drop - tf_step}s before the frame rate falls",
+                fill=INK,
+                font=F_LABEL,
+            )
+            _text(
+                d,
+                (strip[2] - 300, strip[1] + 72),
+                "cause precedes symptom",
+                fill=MUTED,
+                font=F_SMALL,
+            )
 
     # ------------------------------------------------------------- footer
     _text(
