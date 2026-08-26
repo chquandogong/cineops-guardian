@@ -39,6 +39,7 @@ TOOL_TYPE_BY_PREFIX: dict[str, str] = {
     "search_incident_history": "bigquery",
     "inspect_mcap_recording": "mcap_inspector",
     "render_spatial_evidence": "mcap_inspector",
+    "compare_with_baseline": "mcap_inspector",
     "archive_evidence_to_gcs": "gcs",
     "foxglove_upload_recording": "foxglove",
     "foxglove_list_recordings": "foxglove",
@@ -64,10 +65,14 @@ root cause. Quote the numbers the tool returns.
 3. Render that telemetry and *look at the frame*. Say what the path actually looks \
 like — where it stops being smooth, and what it is avoiding when it does. Do not \
 describe an image you were not shown.
-4. Check whether this has happened before and what fixed it.
-5. Actively rule out the plausible alternatives (network congestion, GPU thermal \
+4. Compare the failing take against the known-good baseline before you blame any \
+metric. A value is only an anomaly if it differs from a take that finished clean; \
+if the baseline shows the same value, that metric is normal for this rig and you \
+must look elsewhere.
+5. Check whether this has happened before and what fixed it.
+6. Actively rule out the plausible alternatives (network congestion, GPU thermal \
 throttling) against telemetry, and mark them rejected with the conflicting evidence.
-6. Preserve the evidence: archive the recording and publish it to Foxglove so a rig \
+7. Preserve the evidence: archive the recording and publish it to Foxglove so a rig \
 operator can scrub the real bag, and annotate the incident on the Foxglove timeline.
 
 Then stop calling tools and return the final structured investigation. Ground every \

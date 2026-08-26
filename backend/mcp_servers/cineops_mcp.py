@@ -12,6 +12,7 @@ Run standalone for debugging:
     python -m backend.mcp_servers.cineops_mcp
 """
 
+import json
 import logging
 import os
 from datetime import datetime, timedelta
@@ -22,8 +23,9 @@ from mcp.server.mcpserver import Image, MCPServer
 
 from backend.app.integrations.bigquery.client import BigQueryHistoricalClient
 from backend.app.integrations.gcs.client import GCSClient
+from backend.app.integrations.mcap.generator import generate_synthetic_mcap
 from backend.app.integrations.mcap.inspector import MCAPInspector
-from backend.app.integrations.mcap.renderer import render_spatial_evidence
+from backend.app.integrations.mcap.renderer import render_comparison, render_spatial_evidence
 from backend.app.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -90,6 +92,66 @@ def inspect_mcap_recording() -> dict[str, Any]:
 def render_spatial_evidence_tool() -> Image:
     channels = MCAPInspector().read_channels()
     return Image(data=render_spatial_evidence(channels), format="png")
+
+
+@server.tool(
+    name="compare_with_baseline",
+    description=(
+        "Render the failing take beside a known-good take of the same rig on the "
+        "same route, and return the frame plus the numeric deltas. A measurement "
+        "only becomes an anomaly next to a baseline: use this to check whether the "
+        "value you are about to blame actually differs from a take that finished "
+        "clean. If a metric is identical in both takes it is normal for this rig "
+        "and cannot be the root cause, however suspicious it looks on its own."
+    ),
+)
+def compare_with_baseline() -> list:
+    incident = MCAPInspector().read_channels()
+    baseline_path = os.path.join(
+        os.path.dirname(MCAPInspector().mcap_path), "baseline_nominal.mcap"
+    )
+    # A clean baseline never drifts; the ablation profile drifts identically to the
+    # failing take, which must change the agent's conclusion.
+    drifts = abs(settings.BASELINE_TF_Z - 0.350) > 1e-9
+    generate_synthetic_mcap(
+        baseline_path,
+        drift_from=10 if drifts else 999,
+        drifted_z=settings.BASELINE_TF_Z,
+    )
+    baseline = MCAPInspector(baseline_path).read_channels()
+
+    def summarize(ch: dict[str, Any]) -> dict[str, Any]:
+        tf = ch.get("tf") or []
+        cam = ch.get("camera") or []
+        return {
+            "tf_z_translation_m": tf[-1]["transform"]["translation"]["z"] if tf else None,
+            "tf_checksum": tf[-1]["transform"].get("checksum") if tf else None,
+            "recovery_loop_samples": sum(
+                1 for o in (ch.get("odom") or []) if o.get("recovery_loop_active")
+            ),
+            "min_fps": min((c.get("fps", 24.0) for c in cam), default=24.0),
+        }
+
+    inc_stats, base_stats = summarize(incident), summarize(baseline)
+    identical = [k for k, v in base_stats.items() if inc_stats.get(k) == v]
+    differing = {
+        k: {"baseline": v, "failing": inc_stats.get(k)}
+        for k, v in base_stats.items()
+        if inc_stats.get(k) != v
+    }
+    payload = {
+        "baseline_take": "nominal reference run, same rig and route",
+        "identical_metrics": identical,
+        "differing_metrics": differing,
+        "note": (
+            "Metrics listed under identical_metrics are normal for this rig and "
+            "cannot explain the failure."
+        ),
+    }
+    return [
+        json.dumps(payload, indent=1),
+        Image(data=render_comparison(incident, baseline), format="png"),
+    ]
 
 
 # --------------------------------------------------------------------------- #

@@ -196,3 +196,134 @@ def render_spatial_evidence(channels: dict[str, Any]) -> bytes:
     buffer = io.BytesIO()
     img.save(buffer, format="PNG", optimize=True)
     return buffer.getvalue()
+
+
+def render_comparison(incident: dict[str, Any], baseline: dict[str, Any]) -> bytes:
+    """Draws the failing take beside a known-good take of the same rig.
+
+    A measurement only becomes an anomaly next to a baseline. Stacking the two
+    paths and the two TF traces on one canvas lets the model see whether the
+    value it is about to blame actually differs from a take that finished
+    cleanly — including the case where it does not.
+    """
+    img = Image.new("RGB", (W, H), BG)
+    d = ImageDraw.Draw(img)
+
+    _text(d, (PAD, 22), "Failing take vs known-good baseline", fill=INK, font=F_TITLE)
+    _text(
+        d,
+        (PAD, 50),
+        "Same rig, same route. Anything identical in both panels is not the anomaly.",
+        fill=MUTED,
+        font=F_LABEL,
+    )
+
+    panel_w = (W - PAD * 2 - 24) // 2
+    for column, (channels, title, accent) in enumerate(
+        ((baseline, "BASELINE — take completed clean", GREEN), (incident, "FAILING TAKE", RED))
+    ):
+        bx = PAD + column * (panel_w + 24)
+        box = (bx, 78, bx + panel_w, 78 + 330)
+        _panel(d, box, title)
+        d.line([(box[0] + 16, box[1] + 34), (box[0] + 16 + 190, box[1] + 34)], fill=accent, width=3)
+
+        odom = channels.get("odom") or []
+        xs = [o["pose"]["position"]["x"] for o in odom if "pose" in o]
+        ys = [o["pose"]["position"]["y"] for o in odom if "pose" in o]
+        if not xs:
+            continue
+        # both panels share one scale, otherwise the shapes are not comparable
+        all_x = xs + [
+            o["pose"]["position"]["x"] for o in (incident.get("odom") or []) if "pose" in o
+        ]
+        all_y = ys + [
+            o["pose"]["position"]["y"] for o in (incident.get("odom") or []) if "pose" in o
+        ]
+        xmin, xmax = min(all_x) - 0.5, max(all_x) + 0.5
+        ymin, ymax = min(all_y) - 1.0, max(all_y) + 1.0
+        px0, py0 = box[0] + 24, box[1] + 56
+        px1, py1 = box[2] - 20, box[3] - 24
+
+        def sx(x: float, a=px0, b=px1, lo=xmin, hi=xmax) -> float:
+            return a + (x - lo) / (hi - lo) * (b - a)
+
+        def sy(y: float, a=py0, b=py1, lo=ymin, hi=ymax) -> float:
+            return b - (y - lo) / (hi - lo) * (b - a)
+
+        for i in range(4):
+            gy = py0 + i * (py1 - py0) / 3
+            d.line([(px0, gy), (px1, gy)], fill=GRID, width=1)
+
+        osc_from = next((i for i, o in enumerate(odom) if o.get("recovery_loop_active")), len(odom))
+        pts = [(sx(x), sy(y)) for x, y in zip(xs, ys, strict=False)]
+        if len(pts) > 1:
+            d.line(pts[: max(osc_from, 1)], fill=CYAN, width=3)
+            if osc_from < len(pts):
+                d.line(pts[max(osc_from - 1, 0) :], fill=AMBER, width=3)
+
+        loops = sum(1 for o in odom if o.get("recovery_loop_active"))
+        cam = channels.get("camera") or []
+        min_fps = min((c.get("fps", 24.0) for c in cam), default=24.0)
+        tf = channels.get("tf") or []
+        tz = tf[-1]["transform"]["translation"]["z"] if tf else 0.0
+        _text(
+            d,
+            (px0, py1 + 6),
+            f"recovery loops {loops} · min {min_fps:.2f} fps · TF Z {tz:.3f} m",
+            fill=MUTED,
+            font=F_SMALL,
+        )
+
+    # ------------------------------------------------------- delta summary
+    box = (PAD, 78 + 350, W - PAD, H - 56)
+    _panel(d, box, "WHAT ACTUALLY DIFFERS")
+
+    def stats(ch: dict[str, Any]) -> tuple[float, int, float]:
+        tf = ch.get("tf") or []
+        tz = tf[-1]["transform"]["translation"]["z"] if tf else 0.0
+        loops = sum(1 for o in (ch.get("odom") or []) if o.get("recovery_loop_active"))
+        cam = ch.get("camera") or []
+        return tz, loops, min((c.get("fps", 24.0) for c in cam), default=24.0)
+
+    b_tz, b_loops, b_fps = stats(baseline)
+    i_tz, i_loops, i_fps = stats(incident)
+    rows = [
+        (
+            "TF Z-translation",
+            f"{b_tz:.3f} m",
+            f"{i_tz:.3f} m",
+            abs(i_tz - b_tz) > 1e-6,
+            f"{(i_tz - b_tz) * 1000:+.0f} mm",
+        ),
+        (
+            "Recovery loops",
+            str(b_loops),
+            str(i_loops),
+            i_loops != b_loops,
+            f"{i_loops - b_loops:+d}",
+        ),
+        (
+            "Minimum frame rate",
+            f"{b_fps:.2f} fps",
+            f"{i_fps:.2f} fps",
+            abs(i_fps - b_fps) > 1e-6,
+            f"{i_fps - b_fps:+.2f} fps",
+        ),
+    ]
+    y = box[1] + 46
+    _text(d, (box[0] + 24, y), "metric", fill=MUTED, font=F_SMALL)
+    _text(d, (box[0] + 300, y), "baseline", fill=MUTED, font=F_SMALL)
+    _text(d, (box[0] + 470, y), "failing", fill=MUTED, font=F_SMALL)
+    _text(d, (box[0] + 640, y), "delta", fill=MUTED, font=F_SMALL)
+    y += 26
+    for label, base, fail, differs, delta in rows:
+        colour = RED if differs else MUTED
+        _text(d, (box[0] + 24, y), label, fill=INK if differs else MUTED, font=F_BODY)
+        _text(d, (box[0] + 300, y), base, fill=MUTED, font=F_BODY)
+        _text(d, (box[0] + 470, y), fail, fill=colour, font=F_BODY)
+        _text(d, (box[0] + 640, y), delta if differs else "identical", fill=colour, font=F_BODY)
+        y += 30
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG", optimize=True)
+    return buffer.getvalue()

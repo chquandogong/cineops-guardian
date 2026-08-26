@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     # container installs it at /usr/local/bin/mcp-grafana.
     MCP_GRAFANA_BINARY: str = "/usr/local/bin/mcp-grafana"
 
+    # Known-good baseline take used by the comparison tool. BASELINE_TF_Z is the
+    # TF Z-translation the reference rig settles on; setting it to the incident's
+    # value is how the comparison is ablation-tested — if the agent still blames
+    # TF drift when the baseline shows the same value, the tool is decorative.
+    BASELINE_TF_Z: float = 0.350
+
     # Stage Metadata
     DEFAULT_STAGE_ID: str = "stage-a-virtual-prod"
     DEFAULT_ROBOT_ID: str = "dolly-alpha-01"
