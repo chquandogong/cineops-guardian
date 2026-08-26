@@ -1,6 +1,6 @@
 [project]
 name = "cineops-guardian"
-version = "2.1.0"
+version = "2.2.0"
 description = "Observability and AI Agent Incident Investigation for Virtual Production and Robotic Cameras"
 readme = "README.md"
 requires-python = ">=3.12"

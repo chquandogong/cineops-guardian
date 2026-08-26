@@ -132,7 +132,7 @@ GRAFANA_TOOL_ALLOWLIST = {
 ```
 
 **`cineops` — 나머지 전부를 담당하는 자체 서버.**
-`backend/mcp_servers/cineops_mcp.py`가 stdio로 도구 6개를 노출합니다: ROS2 MCAP
+`backend/mcp_servers/cineops_mcp.py`가 stdio로 도구 8개를 노출합니다: ROS2 MCAP
 인스펙터, BigQuery 사고 이력, GCS 증거 아카이브, 그리고 Foxglove 도구 3개.
 자세한 이유는 [Foxglove에 자체 MCP 서버가 필요한 이유](#foxglove에-자체-mcp-서버가-필요한-이유)를 보세요.
 
@@ -314,6 +314,67 @@ for blob, mime in result.images:
 
 ---
 
+## 베이스라인이 있어야 측정값이 이상값이 됩니다
+
+에이전트는 실패한 테이크의 변환이 0.385 m인 것을 읽고, 이 리그가 평소 0.350 m로
+동작한다는 사실을 확인하지 않은 채 드리프트라고 부를 수 있습니다.
+`compare_with_baseline`은 실패 테이크를 정상 기준 주행과 같은 스케일로 나란히
+렌더하고, 지표별로 무엇이 동일하고 무엇이 다른지 반환합니다. 동일한 것은 이 리그의
+정상 상태이므로 원인이 될 수 없습니다.
+
+### 실제로 작동하는지 증명하기
+
+모델이 호출만 하고 무시하는 도구는 장식입니다. 그래서 베이스라인을 ablation으로
+검증했습니다. `BASELINE_TF_Z`가 기준 리그의 정착값을 정하는데, 이를 실패 테이크와
+같은 값으로 두면 모든 지표가 동일하게 나옵니다. 대조가 기능한다면 판정이 바뀌어야
+합니다.
+
+배포된 서비스에서 같은 코드로 베이스라인만 바꿔 측정한 결과입니다.
+
+| | 정상 베이스라인 | Ablation 베이스라인 |
+|---|---|---|
+| 도구 보고 | 4개 지표 차이 | `differing_metrics: {}` |
+| 1순위 가설 | Stale TF Extrinsic Drift | Unexplained Trajectory Halt |
+| 신뢰도 / 상태 | **0.98 supported** | **0.30 investigating** |
+| TF 가설 | 1순위 | **2순위 강등, rejected** |
+| 가드레일 | 미발동 | 발동 |
+
+ablation에서는 모델이 스스로 판단을 바꾸고 이유를 밝혔습니다.
+
+> "direct comparison against a known-good baseline run on this rig reveals
+> **identical** TF Z-translation (0.385m), checksum (0x3E12)…"
+
+**첫 시도는 실패했고, 그게 중요한 지점입니다.** 도구는 차이가 없다고 정확히
+보고했는데 모델은 그대로 0.95로 TF를 지목하고 근거 목록에서 베이스라인을 슬쩍
+빼버렸습니다. 프롬프트만으로는 통제가 안 되므로 두 가지를 고쳤습니다. 페이로드가
+모순을 수동적으로 알리는 대신 단정적으로 명시하고, `_flag_baseline_contradiction`이
+모델의 협조와 무관하게 판정문을 베이스라인과 다시 대조합니다 — 신뢰도 0.30 상한,
+가설을 `investigating`으로, 모순을 `missing_evidence`에.
+
+정상 베이스라인에서는 가드레일이 울리지 않고 진단도 0.98로 그대로입니다. 즉 아무
+때나 발동하는 게 아닙니다.
+
+---
+
+## 실제 Foxglove 뷰어를 열어보고 배운 것
+
+스키마를 고치니 레코딩이 렌더되었고, 그때 뷰어가 요약 통계로는 보이지 않는 것을
+보여줬습니다. 동기화된 두 플롯이 **t=10s**의 변환 계단과 **t=12s**의 프레임레이트
+하락을 나란히 놓습니다. 순서가 원인과 증상을 가르고, min/max 표는 그걸 전달하지
+못합니다.
+
+그 발견을 렌더된 프레임에 `ORDER OF EVENTS` 스트립으로 되돌려 넣었고, 모델이
+인용합니다.
+
+> "Order of events shows TF Z divergence at t=10s, followed by frame rate dropping
+> to 16.20 fps at t=12s, and recovery loops beginning at t=14s."
+
+사람은 뷰어 자체를 받습니다. 모든 Foxglove 도구가 레이아웃 id와 지적된 타임스탬프를
+담은 `operator_link`를 반환하므로, 링크는 파일 목록이 아니라 에이전트가 주석을 단
+그 순간의 사고 조사 레이아웃으로 열립니다.
+
+---
+
 ## 빠른 시작
 
 ### 오프라인 실행 (자격증명 불필요)
@@ -449,8 +510,12 @@ docs/                     아키텍처, 런북, Grafana 통합 노트
   지어내지 않고 그렇게 말합니다. 메트릭 시딩에는 아직 연결하지 않은 remote-write
   푸시가 필요합니다.
 - **인프로세스 상태.** 위의 `max-instances 1` 참고를 보세요.
-- **주석은 달지만 비교는 못 합니다.** 레코딩을 업로드하고 목록을 조회할 뿐,
-  실패한 테이크를 정상 테이크와 대조하지는 못합니다.
+- **에이전트가 Foxglove 뷰어 화면 자체를 보지는 못합니다.** 뷰어는 로그인 세션이
+  필요하고 API 키로는 웹앱 인증이 안 되므로, 서버에서 화면을 캡처하려면 배포된
+  서비스에 세션 쿠키를 저장해야 합니다. 뷰어가 준 정보 — 3D 기하와 인과 순서 —
+  는 렌더된 프레임으로 대신 전달하고, 사람은 레이아웃 링크로 진짜 뷰어를 받습니다.
+- **베이스라인은 녹화가 아니라 생성됩니다.** `compare_with_baseline`은 Foxglove에서
+  실제 과거 주행을 가져오는 대신 정상 테이크를 합성합니다.
 
 ## 라이선스
 

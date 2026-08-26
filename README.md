@@ -134,7 +134,7 @@ GRAFANA_TOOL_ALLOWLIST = {
 ```
 
 **`cineops` — a first-party server for everything else.**
-`backend/mcp_servers/cineops_mcp.py` exposes six tools over stdio: the ROS2 MCAP
+`backend/mcp_servers/cineops_mcp.py` exposes eight tools over stdio: the ROS2 MCAP
 inspector, BigQuery incident history, the GCS evidence archive, and three Foxglove
 tools. See [Why Foxglove needs its own MCP server](#why-foxglove-needs-its-own-mcp-server).
 
@@ -321,6 +321,70 @@ check its work rather than take its word.
 
 ---
 
+## A baseline is what makes a measurement an anomaly
+
+The agent could read the failing take's transform sitting at 0.385 m and call it
+drift without ever establishing that 0.350 m is what this rig normally runs at.
+`compare_with_baseline` renders the failing take beside a nominal reference run on
+a shared scale and returns, metric by metric, what is identical and what differs.
+Anything identical is normal for this rig and cannot be the cause.
+
+### Proving it does real work
+
+A tool the model calls and then ignores is decorative. So the baseline is
+ablation-tested: `BASELINE_TF_Z` sets what the reference rig settles on, and
+pointing it at the failing take's own value makes every metric come back
+identical. If the comparison is functional, that has to change the verdict.
+
+Measured on the deployed service, same code, baseline swapped:
+
+| | clean baseline | ablation baseline |
+|---|---|---|
+| tool reports | 4 metrics differ | `differing_metrics: {}` |
+| primary hypothesis | Stale TF Extrinsic Drift | Unexplained Trajectory Halt |
+| confidence / status | **0.98 supported** | **0.30 investigating** |
+| TF hypothesis | rank 1 | **demoted to rank 2, rejected** |
+| guardrail | did not fire | fired |
+
+In the ablation run the model changed its own mind, and said why:
+
+> "direct comparison against a known-good baseline run on this rig reveals
+> **identical** TF Z-translation (0.385m), checksum (0x3E12)…"
+
+**The first attempt failed, which is the interesting part.** The tool correctly
+reported that nothing differed and the agent blamed TF drift at 0.95 anyway,
+quietly dropping the baseline from its evidence list. Two changes followed,
+because prompting is not a control: the payload now states the contradiction
+outright instead of noting it passively, and `_flag_baseline_contradiction`
+re-checks the verdict against what the baseline returned whether or not the model
+cooperated — capping confidence at 0.30, moving the hypothesis to
+`investigating`, and putting the contradiction in `missing_evidence`.
+
+With the clean baseline the guardrail stays silent and the diagnosis is unchanged
+at 0.98, so it is not simply firing on everything.
+
+---
+
+## What opening the real Foxglove viewer taught us
+
+Fixing the schemas made the recording render, and the viewer then showed something
+the summary statistics hide. Two synchronised plots put the transform stepping at
+**t=10s** next to the frame rate falling at **t=12s**. Ordering is what separates
+cause from symptom, and no min/max table conveys it.
+
+That finding went back into the rendered frame as an explicit order-of-events
+strip, and the model now cites it:
+
+> "Order of events shows TF Z divergence at t=10s, followed by frame rate dropping
+> to 16.20 fps at t=12s, and recovery loops beginning at t=14s."
+
+The operator gets the viewer itself: every Foxglove tool returns an
+`operator_link` carrying the layout id and the flagged timestamp, so the link
+opens the incident-triage layout at the moment the agent annotated rather than a
+file listing.
+
+---
+
 ## Quickstart
 
 ### Run it offline (no credentials)
@@ -458,8 +522,14 @@ docs/                     architecture, runbook, Grafana integration notes
   so rather than inventing values. Seeding metrics needs a remote-write push that
   is not wired up yet.
 - **In-process state.** See the `max-instances 1` note above.
-- **The agent can annotate but not compare.** It uploads and lists recordings; it
-  does not yet diff a failing take against a known-good one.
+- **The agent cannot see the Foxglove viewer itself.** The viewer needs an
+  authenticated browser session and an API key does not authenticate the web app,
+  so capturing its screen server-side would mean storing a session cookie in a
+  deployed service. What the viewer contributed — 3D geometry and causal ordering
+  — is delivered through the rendered frame instead; the operator gets the real
+  viewer through the layout link.
+- **The baseline is generated, not recorded.** `compare_with_baseline` synthesises
+  a nominal take rather than pulling a real prior run out of Foxglove.
 
 ## License
 

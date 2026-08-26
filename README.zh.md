@@ -126,7 +126,7 @@ GRAFANA_TOOL_ALLOWLIST = {
 ```
 
 **`cineops` — 承担其余全部职责的自建服务器。**
-`backend/mcp_servers/cineops_mcp.py` 通过 stdio 暴露 6 个工具：ROS2 MCAP 检查器、
+`backend/mcp_servers/cineops_mcp.py` 通过 stdio 暴露 8 个工具：ROS2 MCAP 检查器、
 BigQuery 故障历史、GCS 证据归档，以及 3 个 Foxglove 工具。原因详见
 [为什么 Foxglove 需要自建 MCP 服务器](#为什么-foxglove-需要自建-mcp-服务器)。
 
@@ -293,6 +293,61 @@ for blob, mime in result.images:
 
 ---
 
+## 有基线，测量值才成为异常
+
+智能体可以读到失败拍摄的变换停在 0.385 m，却从未确认这台设备平时就跑在 0.350 m，
+然后就把它叫做漂移。`compare_with_baseline` 会把失败拍摄与一条标称参考运行按同一
+标尺并排渲染，并逐项返回哪些指标相同、哪些不同。相同的那些是这台设备的正常状态，
+不可能是原因。
+
+### 证明它确实在起作用
+
+模型调用了却忽略的工具就是装饰。因此我们对基线做了消融测试：`BASELINE_TF_Z` 决定
+参考设备的稳定值，把它指向失败拍摄自己的数值，所有指标就会全部相同。如果对比是有
+效的，结论就必须改变。
+
+在部署的服务上以相同代码、仅替换基线测得：
+
+| | 干净基线 | 消融基线 |
+|---|---|---|
+| 工具报告 | 4 项指标不同 | `differing_metrics: {}` |
+| 首要假设 | Stale TF Extrinsic Drift | Unexplained Trajectory Halt |
+| 置信度 / 状态 | **0.98 supported** | **0.30 investigating** |
+| TF 假设 | 第 1 位 | **降至第 2 位，rejected** |
+| 护栏 | 未触发 | 触发 |
+
+在消融运行中，模型自己改变了判断，并说明了原因：
+
+> "direct comparison against a known-good baseline run on this rig reveals
+> **identical** TF Z-translation (0.385m), checksum (0x3E12)…"
+
+**第一次尝试失败了，而这恰恰是关键。** 工具正确报告了没有任何差异，智能体仍以 0.95
+指认 TF 漂移，并悄悄把基线从证据列表里去掉。提示词不是控制手段，于是做了两处修改：
+载荷不再被动地附注，而是直接陈述矛盾；`_flag_baseline_contradiction` 则不论模型是否
+配合，都用基线返回的结果重新核对结论——置信度上限 0.30，假设转为
+`investigating`，矛盾写入 `missing_evidence`。
+
+在干净基线下护栏保持沉默，诊断仍是 0.98，说明它并非对一切都触发。
+
+---
+
+## 打开真正的 Foxglove 查看器学到了什么
+
+修好 schema 后录制就能渲染，而查看器随即显示出汇总统计所隐藏的东西：两个同步的
+折线图把 **t=10s** 的变换阶跃与 **t=12s** 的帧率下降并排放在一起。顺序正是区分原因
+与症状的东西，而最大/最小值表无法传达它。
+
+这个发现被写回渲染帧，成为一条明确的 `ORDER OF EVENTS` 条带，模型也会引用它：
+
+> "Order of events shows TF Z divergence at t=10s, followed by frame rate dropping
+> to 16.20 fps at t=12s, and recovery loops beginning at t=14s."
+
+人则拿到查看器本身：每个 Foxglove 工具都返回带布局 id 和标记时间戳的
+`operator_link`，因此链接打开的是智能体标注那一刻的故障排查布局，而不是一个文件
+列表。
+
+---
+
 ## 快速开始
 
 ### 离线运行（无需凭据）
@@ -424,8 +479,12 @@ docs/                     架构、运行手册、Grafana 集成说明
   `query_prometheus` 合理地返回空，而智能体会照实说明，不会编造数值。灌入指标需要
   remote-write 推送，目前尚未接通。
 - **进程内状态。** 见上文 `max-instances 1` 的说明。
-- **能标注但不能对比。** 它会上传和列出录制，但还不能把失败的这条拍摄与已知正常的
-  一条做差异比对。
+- **智能体看不到 Foxglove 查看器本身。** 查看器需要已登录的浏览器会话，而 API key
+  并不能认证这个 Web 应用，因此在服务端截屏就意味着要把会话 cookie 存进已部署的
+  服务里。查看器所贡献的信息——3D 几何与因果顺序——改由渲染帧传递；人则通过布局
+  链接拿到真正的查看器。
+- **基线是生成的，不是录下来的。** `compare_with_baseline` 合成一条标称拍摄，而不是
+  从 Foxglove 取出真实的历史运行。
 
 ## 许可
 

@@ -1,5 +1,77 @@
 # Changelog
 
+## v2.2.0 — a baseline that binds, and a recording that renders
+
+### Added
+
+- **`compare_with_baseline`** MCP tool. Generates a nominal reference take of the
+  same rig on the same route, renders both paths side by side on a shared scale,
+  and returns a metric-by-metric split of what is identical and what differs.
+  A measurement only becomes an anomaly next to a baseline.
+- **Ablation test for it.** `BASELINE_TF_Z` sets what the reference rig settles
+  on. Point it at the failing take's own value and every metric comes back
+  identical, which must change the verdict. Measured on the deployed service:
+
+  | | clean baseline | ablation baseline |
+  |---|---|---|
+  | primary hypothesis | Stale TF Extrinsic Drift | Unexplained Trajectory Halt |
+  | confidence / status | 0.98 supported | 0.30 investigating |
+  | TF hypothesis | rank 1 | demoted to rank 2, rejected |
+  | guardrail | did not fire | fired |
+
+- **`_flag_baseline_contradiction` guardrail.** The first ablation run *failed*:
+  the tool correctly reported `differing_metrics: {}` and the agent blamed TF
+  drift at 0.95 anyway, dropping the baseline from its evidence. Prompting is not
+  a control, so the verdict is now checked against what the baseline returned
+  regardless of whether the model cooperated — the trace gains an error entry, the
+  hypothesis drops to `investigating`, confidence is capped at 0.30 and the
+  contradiction is added to missing_evidence.
+- **Well-known Foxglove schemas.** `foxglove.FrameTransform`, `PoseInFrame`,
+  `PointCloud` and `SceneUpdate` on four visualization topics: the full TF tree
+  carrying the drifting Z, the dolly pose, a LiDAR sweep projected with the
+  calibration error applied, and the phantom obstacle as scene geometry.
+- **`operator_link`** on the Foxglove tool payloads, carrying `FOXGLOVE_LAYOUT_ID`
+  and the flagged timestamp.
+- **Order-of-events strip** on the rendered frame, naming each transition and the
+  gap between them.
+
+### Fixed
+
+- **Uploading to Foxglove produced an empty viewer.** The 3D panel does not draw
+  arbitrary JSON; a bag made entirely of `foxglove.JsonMessage` on custom topics
+  loads without error and shows nothing. The operator handoff this project
+  advertised did not exist. Verified fixed in the viewer: ground grid, LiDAR
+  point cloud and the labelled `world → base_link → lidar_link →
+  camera_optical_frame` tree all render.
+- **A bare recordings URL opened the default layout**, whose panels have no topics
+  enabled — so even a correct bag showed nothing. Links now open the
+  incident-triage layout at the annotated moment.
+- **Scene entities blinked out.** Lifetime was 0.4s against 1 Hz messages, so the
+  phantom obstacle never appeared between frames.
+- **The Grafana MCP binary was recompiled from source on every deploy.** Cloud
+  Build keeps no layer cache, and once Pillow joined the dependency set the build
+  ran past its timeout and started failing. The runtime stage now downloads the
+  published v1.2.0 release and verifies it with `--version`, dropping a whole
+  builder stage.
+
+### Verified
+
+Side-by-side plots in Foxglove showed something a min/max table hides: the
+transform diverges at t=10s and the frame rate only falls at t=12s. That ordering
+is now stated on the rendered frame, and the model cites it:
+
+> "Order of events shows TF Z divergence at t=10s, followed by frame rate dropping
+> to 16.20 fps at t=12s, and recovery loops beginning at t=14s."
+
+### Not done, and why
+
+The Foxglove viewer needs an authenticated browser session; an API key does not
+authenticate the web app. Capturing its screen server-side would mean storing a
+session cookie in a deployed service — fragile and a poor security trade. The
+information the viewer contributed (3D geometry, causal ordering) is delivered
+through the rendered frame instead, and the operator gets the real viewer via the
+layout link.
+
 ## v2.1.0 — the agent looks at the telemetry
 
 The agent reasoned only over summary statistics. An oscillating avoidance loop is
