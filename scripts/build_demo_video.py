@@ -39,8 +39,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "",
         "action": "title_card",
         "text": (
-            "A robotic camera dolly halts during Scene 42, Take 3. On a virtual "
-            "production stage, every idle hour burns about twenty-five thousand dollars."
+            "A robotic camera dolly halts during Scene 42, Take 3. An idle virtual "
+            "production stage burns about twenty-five thousand dollars an hour."
         ),
     },
     {
@@ -57,9 +57,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "Frame rate <b>16.2 fps</b> · <b>7</b> recovery loops · localization <b>42%</b>",
         "action": "show_metrics",
         "text": (
-            "The live telemetry is bad. Frame delivery has collapsed to sixteen point two "
-            "frames per second, the navigation stack has entered seven recovery loops, and "
-            "localization confidence has fallen to forty-two percent."
+            "The telemetry is bad: sixteen point two frames per second, seven "
+            "navigation recovery loops, localization confidence at forty-two percent."
         ),
     },
     {
@@ -67,9 +66,9 @@ SCENES: list[dict[str, str]] = [
         "caption": "Two <b>MCP servers</b>: official grafana/mcp-grafana + first-party CineOps",
         "action": "rerun_agent",
         "text": (
-            "Watch what happens when the agent runs. It connects to two Model Context "
-            "Protocol servers: Grafana's own mcp-grafana binary, and a CineOps server "
-            "covering Foxglove, BigQuery, Cloud Storage and the MCAP inspector."
+            "Watch it run. It connects to two Model Context Protocol servers: Grafana's "
+            "own mcp-grafana binary, and a CineOps server for Foxglove, BigQuery, Cloud "
+            "Storage and the MCAP inspector."
         ),
     },
     {
@@ -77,9 +76,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "<b>Gemini 3.7 Flash</b> chooses every tool call — nothing is scripted",
         "action": "follow_trace",
         "text": (
-            "Nothing here is a fixed pipeline. Gemini three point seven Flash is handed the "
-            "tool catalogue and decides what to call and in what order. The trace you are "
-            "watching is the model's own decision log, streamed over server-sent events."
+            "Nothing here is a fixed pipeline. Gemini three point seven Flash gets the "
+            "tool catalogue and decides what to call. This trace is its own decision log."
         ),
     },
     {
@@ -96,9 +94,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "MCAP inspected before any spatial claim — <b>+35mm Z offset</b> measured",
         "action": "follow_trace",
         "text": (
-            "Before claiming a physical root cause, it inspects the ROS2 MCAP recording "
-            "and measures the offset itself: plus thirty-five millimetres on the Z axis "
-            "between the camera optical frame and the LiDAR."
+            "Before claiming a physical cause it measures the offset itself: plus "
+            "thirty-five millimetres on the Z axis, camera frame to LiDAR."
         ),
     },
     {
@@ -106,10 +103,38 @@ SCENES: list[dict[str, str]] = [
         "caption": "Then it <b>renders the telemetry and looks at it</b> — MCP image content",
         "action": "follow_trace",
         "text": (
-            "Then it does something numbers cannot do for it. It renders that telemetry "
-            "and looks at the frame. In its own words, the trajectory breaks from a "
-            "linear nominal path into tight zig-zag recovery loops centred on the "
-            "phantom obstacle. That shape is the diagnosis."
+            "Then it renders the telemetry and looks at the frame. In its own words, the "
+            "path breaks from a straight line into tight zig-zag loops around a phantom "
+            "obstacle."
+        ),
+    },
+    {
+        "id": "ordering",
+        "caption": "The frame states the <b>order of events</b> — cause precedes symptom",
+        "action": "follow_trace",
+        "text": (
+            "The frame also carries the order of events, which separates cause from "
+            "symptom. The transform diverges at ten seconds. The frame rate falls at "
+            "twelve."
+        ),
+    },
+    {
+        "id": "baseline",
+        "caption": "<b>Compared against a clean take</b> — identical means not the cause",
+        "action": "follow_trace",
+        "text": (
+            "It compares the failing take against a clean run of the same rig. Anything "
+            "identical in both is normal for this rig, and cannot be the cause."
+        ),
+    },
+    {
+        "id": "ablation",
+        "caption": "Ablation: give it a baseline that <b>matches</b> — it withdraws the claim",
+        "action": "follow_trace",
+        "text": (
+            "We tested that this binds. Give it a baseline whose transform matches the "
+            "failing take, and it drops its own root cause from ninety-eight percent to "
+            "thirty. If it ignores the baseline, a guardrail catches it."
         ),
     },
     {
@@ -117,8 +142,7 @@ SCENES: list[dict[str, str]] = [
         "caption": "<b>BigQuery</b> history: a prior take failed the same way",
         "action": "follow_trace",
         "text": (
-            "It searches the BigQuery incident history and finds this has happened "
-            "before, along with the recovery that fixed it."
+            "BigQuery history shows this has happened before, and what fixed it."
         ),
     },
     {
@@ -126,9 +150,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "Agent publishes the bag to <b>Foxglove</b> itself",
         "action": "follow_trace",
         "text": (
-            "It preserves the evidence on its own initiative: archiving the recording to "
-            "Cloud Storage and uploading the bag to Foxglove, so a rig operator can scrub "
-            "the real telemetry rather than take its word."
+            "It preserves the evidence itself, and hands the operator a Foxglove link "
+            "that opens at the annotated moment rather than a file listing."
         ),
     },
     {
@@ -146,9 +169,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "Recovery stops at a <b>human safety gate</b> — zero robot actuation",
         "action": "open_gate",
         "text": (
-            "The recovery plan stops at a human safety gate. The agent has no tool that "
-            "can move the robot. An operator reviews the calibration reload, the expected "
-            "effect and the rollback, and signs it off."
+            "Recovery stops at a human safety gate. The agent has no tool that can move "
+            "the robot. An operator reviews the reload and the rollback, and signs off."
         ),
     },
     {
@@ -156,9 +178,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "Verified: TF checksum converged, <b>24.00 fps genlock restored</b>",
         "action": "authorize",
         "text": (
-            "After execution the recovery is verified automatically. The static transform "
-            "checksum converges, and twenty-four frame per second genlock is restored. "
-            "The take is saved."
+            "Recovery is then verified automatically: the checksum converges and "
+            "twenty-four frame per second genlock returns. The take is saved."
         ),
     },
     {
@@ -166,8 +187,8 @@ SCENES: list[dict[str, str]] = [
         "caption": "",
         "action": "close_card",
         "text": (
-            "From alert to verified recovery, with every tool call travelling over MCP. "
-            "The code is open source under Apache two point zero."
+            "From alert to verified recovery, every tool call over MCP. Open source "
+            "under Apache two point zero."
         ),
     },
 ]
